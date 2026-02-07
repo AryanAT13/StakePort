@@ -7,6 +7,7 @@ import { parseEther, formatEther } from 'viem';
 import { useState, useEffect } from 'react';
 import { ASSET_FACTORY_ADDRESS, ASSET_FACTORY_ABI } from '../constants/contracts';
 import AssetCard from '../components/AssetCard';
+import MarketPulse from '../components/MarketPulse';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -90,6 +91,7 @@ const { data: assetList } = useReadContract({
   return (
     <main className="min-h-screen bg-black text-white">
       <Navbar />
+      <MarketPulse />
 
       <div className="max-w-6xl mx-auto p-8">
         <header className="mb-12">

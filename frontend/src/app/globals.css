@@ -24,3 +24,18 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer utilities {
+  .animate-marquee {
+    /* Increased to 80s for slower speed */
+    animation: marquee 80s linear infinite;
+    /* Ensure the strip is wide enough to not wrap */
+    width: max-content;
+  }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  /* Only move halfway. This is the secret to the perfect loop. */
+  100% { transform: translateX(-50%); }
+}
