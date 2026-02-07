@@ -16,6 +16,7 @@ export default function Navbar() {
       {/* Navigation Links (We will build these pages later) */}
       <div className="hidden md:flex gap-8 text-sm font-medium text-gray-400">
         <Link href="/" className="hover:text-white transition">Dashboard</Link>
+        <Link href="/create" className="hover:text-white transition font-bold text-blue-500">+ List Asset</Link>
         <Link href="/market" className="hover:text-white transition">Marketplace</Link>
         <Link href="/portfolio" className="hover:text-white transition">My Assets</Link>
       </div>

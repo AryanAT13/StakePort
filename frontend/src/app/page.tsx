@@ -5,6 +5,8 @@ import { useAccount, useReadContract, useWriteContract } from 'wagmi';
 import { MOCK_USDC_ADDRESS, ERC20_ABI } from '../constants/contracts';
 import { parseEther, formatEther } from 'viem';
 import { useState, useEffect } from 'react';
+import { ASSET_FACTORY_ADDRESS, ASSET_FACTORY_ABI } from '../constants/contracts';
+import AssetCard from '../components/AssetCard';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -25,6 +27,13 @@ export default function Home() {
       enabled: !!address,
     }
   });
+
+  // Fetch the list of all deployed assets
+const { data: assetList } = useReadContract({
+    address: ASSET_FACTORY_ADDRESS,
+    abi: ASSET_FACTORY_ABI,
+    functionName: 'getDeployedAssets',
+});
 
   // Update UI when data comes back
   useEffect(() => {
@@ -133,11 +142,38 @@ export default function Home() {
             )}
           </div>
         </div>
-
+        {/* Recent Assets Section */}
         <section>
-          <h2 className="text-2xl font-bold mb-6">Trending Assets</h2>
-          <div className="p-12 border border-dashed border-zinc-800 rounded-2xl text-center text-gray-500">
-            No assets listed yet. Go to Admin Panel to list.
+          <div className="flex justify-between items-end mb-6">
+            <h2 className="text-2xl font-bold">Trending Assets</h2>
+            {/* Show count of assets if loaded */}
+            <span className="text-gray-500 text-sm">
+                {assetList ? (assetList as []).length : 0} Assets Listed
+            </span>
+          </div>
+
+          {/* GRID OF ASSETS */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* If loading... */}
+            {!assetList && (
+                <div className="text-gray-500 col-span-full text-center py-12">
+                    Loading assets from blockchain...
+                </div>
+            )}
+
+            {/* If empty... */}
+            {assetList && (assetList as []).length === 0 && (
+                <div className="p-12 border border-dashed border-zinc-800 rounded-2xl text-center text-gray-500 col-span-full">
+                    No assets listed yet.
+                </div>
+            )}
+
+            {/* Render the cards */}
+            {assetList && (assetList as `0x${string}`[]).map((address) => (
+                <AssetCard key={address} assetAddress={address} />
+            ))}
+            
           </div>
         </section>
       </div>

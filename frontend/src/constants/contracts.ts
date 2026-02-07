@@ -13,6 +13,7 @@ export const ASSET_FACTORY_ABI = parseAbi([
 
 export const REAL_WORLD_ASSET_ABI = parseAbi([
   "function assetName() view returns (string)",
+  "function symbol() view returns (string)",
   "function assetUrl() view returns (string)",
   "function valuation() view returns (uint256)",
   "function buyoutProposed() view returns (bool)",
