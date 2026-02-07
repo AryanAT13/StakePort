@@ -12,16 +12,28 @@ export const ASSET_FACTORY_ABI = parseAbi([
 ]);
 
 export const REAL_WORLD_ASSET_ABI = parseAbi([
+  // --- View Functions ---
   "function assetName() view returns (string)",
   "function symbol() view returns (string)",
   "function assetUrl() view returns (string)",
   "function valuation() view returns (uint256)",
-  "function buyoutProposed() view returns (bool)",
-  "function buyoutPrice() view returns (uint256)",
+  "function getPrice() view returns (uint256)",
+  "function tradingActive() view returns (bool)",
+  "function balanceOf(address account) view returns (uint256)",
+  "function totalSupply() view returns (uint256)",
+  "function allowance(address owner, address spender) view returns (uint256)", // <--- NEW
+
+  // --- Write Functions ---
+  "function approve(address spender, uint256 amount) returns (bool)", // <--- NEW (Fixes your error)
+  "function buyTokens(uint256 usdcInput) external",
+  "function sellTokens(uint256 tokenInput) external",
+  "function addLiquidity(uint256 tokenAmount) external",
   "function initiateBuyout(uint256 _offerAmount) external",
   "function cashOut() external",
-  "function balanceOf(address account) view returns (uint256)",
-  "function totalSupply() view returns (uint256)"
+
+  // --- Events ---
+  "function buyoutProposed() view returns (bool)",
+  "function buyoutPrice() view returns (uint256)"
 ]);
 
 export const ERC20_ABI = parseAbi([
