@@ -1,13 +1,17 @@
-export const MOCK_USDC_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-export const ASSET_FACTORY_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+import { parseAbi } from 'viem';
 
-export const ASSET_FACTORY_ABI = [
+// 1. The Addresses (Added 'as const' to fix the TS error)
+export const MOCK_USDC_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3" as const;
+export const ASSET_FACTORY_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" as const;
+
+// 2. The ABIs
+export const ASSET_FACTORY_ABI = parseAbi([
   "function createAsset(string _name, string _symbol, string _url, uint256 _valuation) external",
   "function getDeployedAssets() external view returns (address[])",
   "event AssetCreated(address indexed assetAddress, string name, address indexed owner)"
-];
+]);
 
-export const REAL_WORLD_ASSET_ABI = [
+export const REAL_WORLD_ASSET_ABI = parseAbi([
   "function assetName() view returns (string)",
   "function assetUrl() view returns (string)",
   "function valuation() view returns (uint256)",
@@ -17,13 +21,13 @@ export const REAL_WORLD_ASSET_ABI = [
   "function cashOut() external",
   "function balanceOf(address account) view returns (uint256)",
   "function totalSupply() view returns (uint256)"
-];
+]);
 
-export const ERC20_ABI = [
+export const ERC20_ABI = parseAbi([
   "function name() view returns (string)",
   "function symbol() view returns (string)",
   "function approve(address spender, uint256 amount) external returns (bool)",
   "function allowance(address owner, address spender) view returns (uint256)",
   "function balanceOf(address account) view returns (uint256)",
-  "function mint(address to, uint256 amount) external" // Only for MockUSDC
-];
+  "function mint(address to, uint256 amount) external" 
+]);
