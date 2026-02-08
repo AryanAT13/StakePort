@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./RealWorldAsset.sol";
+import "./TradeableAsset.sol";
 import "./MockUSDC.sol"; // Import MockUSDC
 
 contract AssetFactory {
-    RealWorldAsset[] public assets;
+    TradeableAsset[] public assets;
     address public paymentTokenAddress; // The address of our Fake Money
 
     event AssetCreated(address indexed assetAddress, string name, address indexed owner);
@@ -21,7 +21,7 @@ contract AssetFactory {
         string memory _url,
         uint256 _valuation
     ) external {
-        RealWorldAsset newAsset = new RealWorldAsset(
+        TradeableAsset newAsset = new TradeableAsset(
             _name,
             _symbol,
             _url,
@@ -34,7 +34,7 @@ contract AssetFactory {
         emit AssetCreated(address(newAsset), _name, msg.sender);
     }
 
-    function getDeployedAssets() external view returns (RealWorldAsset[] memory) {
+    function getDeployedAssets() external view returns (TradeableAsset[] memory) {
         return assets;
     }
 }

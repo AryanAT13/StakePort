@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { REAL_WORLD_ASSET_ABI, ERC20_ABI, MOCK_USDC_ADDRESS } from '../../../constants/contracts';
 import { formatEther, parseEther } from 'viem';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function AssetDetails() {
   const { address: assetAddress } = useParams();
@@ -13,56 +13,94 @@ export default function AssetDetails() {
   
   // State
   const [amount, setAmount] = useState('');
-  const [isBuyMode, setIsBuyMode] = useState(true); // Toggle Buy vs Sell
+  const [isBuyMode, setIsBuyMode] = useState(true);
 
-  // Reads
+  // --- READS ---
   const { data: name } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'assetName' });
   const { data: symbol } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'symbol' });
   const { data: valuation } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'valuation' });
   const { data: imageUrl } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'assetUrl' });
   const { data: currentPrice } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'getPrice' });
-  const { data: tradingActive } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'tradingActive' });
+  const { data: tradingActive, refetch: refetchActive } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'tradingActive' });
 
   // Balances
   const { data: assetBalance } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'balanceOf', args: [userAddress as `0x${string}`] });
   const { data: usdcBalance } = useReadContract({ address: MOCK_USDC_ADDRESS, abi: ERC20_ABI, functionName: 'balanceOf', args: [userAddress as `0x${string}`] });
 
-  // Writes
-  const { writeContract, isPending } = useWriteContract();
+  // --- SMART APPROVAL CHECK ---
+  // We check if the Asset Contract is allowed to spend your USDC
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: MOCK_USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: [userAddress as `0x${string}`, assetAddress as `0x${string}`],
+  });
 
-  // --- 1. ACTIVATING TRADING (Only Creator can do this) ---
-  const handleAddLiquidity = () => {
-    // 1. Approve USDC first
-    // 2. Call addLiquidity(500 tokens)
-    // For MVP simplified flow:
-    const tokenAmount = parseEther("500"); // Put 50% of supply into pool
-    
-    // We assume Creator has already approved USDC. In a real app, we check allowance first.
+  // Writes
+  const { writeContract, isPending, data: hash } = useWriteContract();
+  
+  // Watch for transaction completion to auto-update UI
+// ... inside AssetDetails ...
+
+  // Watch for transaction completion
+  const { isSuccess: isTxSuccess, isError: isTxError, error: txError } = useWaitForTransactionReceipt({ hash });
+
+  useEffect(() => {
+    if (isTxSuccess) {
+        alert("Market Initialized Successfully! Reloading...");
+        window.location.reload(); // <--- Force reload to update UI
+    }
+    if (isTxError) {
+        console.error("Transaction Failed on Chain:", txError);
+        alert("Transaction Failed! Check Console for details.");
+    }
+  }, [isTxSuccess, isTxError, txError]);
+
+const handleInitialize = () => {
+      console.log("Initializing with 500 tokens...");
+      
+      writeContract({
+        address: assetAddress as `0x${string}`,
+        abi: REAL_WORLD_ASSET_ABI,
+        functionName: 'addLiquidity',
+        args: [parseEther("500")],
+        // FIX: Force a high gas limit to bypass the estimation error
+        gas: BigInt(5000000) 
+      }, {
+        onError: (err) => {
+            console.error("Write Error:", err);
+            // This will likely give us the REAL error message now (e.g. "ERC20: transfer amount exceeds allowance")
+            alert("Error: " + (err as any).shortMessage || err.message);
+        }
+      });
+  };
+
+
+  // --- LOGIC: IS STEP 1 DONE? ---
+  // We need 50% of Valuation in USDC. 
+  // e.g. If Valuation is 50,000, we need 25,000 allowance.
+  const requiredAllowance = valuation ? (valuation as bigint) / 2n : 0n;
+  const hasApproved = allowance ? (allowance as bigint) >= requiredAllowance : false;
+
+
+  // --- HANDLERS ---
+  const handleApprove = () => {
     writeContract({
         address: MOCK_USDC_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [assetAddress as `0x${string}`, parseEther("100000000")] // Infinite approve
-    }, {
-        onSuccess: () => {
-            // Once approved, Add Liquidity
-             writeContract({
-                address: assetAddress as `0x${string}`,
-                abi: REAL_WORLD_ASSET_ABI,
-                functionName: 'addLiquidity',
-                args: [tokenAmount]
-            });
-        }
+        args: [assetAddress as `0x${string}`, parseEther("100000000")] // Infinite Approve
     });
   };
 
-  // --- 2. TRADING LOGIC ---
+
   const handleTrade = () => {
     if (!amount || !userAddress) return;
     const parsedAmount = parseEther(amount);
 
     if (isBuyMode) {
-        // BUY: Approve USDC -> Buy Tokens
+        // For Buying, we need to approve USDC first (if not already done)
+        // Ideally we check allowance here too, but for MVP we just trigger approve then buy
         writeContract({
             address: MOCK_USDC_ADDRESS,
             abi: ERC20_ABI,
@@ -70,7 +108,9 @@ export default function AssetDetails() {
             args: [assetAddress as `0x${string}`, parsedAmount]
         }, {
             onSuccess: () => {
-                writeContract({
+                // Wait for user to confirm approve, then trigger buy (Simplified)
+                // Note: In production, we'd wait for receipt. Here we assume fast user.
+                 writeContract({
                     address: assetAddress as `0x${string}`,
                     abi: REAL_WORLD_ASSET_ABI,
                     functionName: 'buyTokens',
@@ -79,9 +119,6 @@ export default function AssetDetails() {
             }
         });
     } else {
-        // SELL: Sell Tokens -> Receive USDC
-        // No approval needed for burning/selling back to contract usually, but let's check
-        // Standard ERC20 sell usually requires approval of the token itself
          writeContract({
             address: assetAddress as `0x${string}`,
             abi: REAL_WORLD_ASSET_ABI,
@@ -120,14 +157,46 @@ export default function AssetDetails() {
                 </div>
             </div>
             
-             {/* Activation Button (Only for Creator if not active) */}
+             {/* --- SMART ACTIVATION PANEL --- */}
             {!tradingActive && assetBalance && (assetBalance as bigint) > 0n && (
-                <div className="mb-8 p-4 bg-yellow-900/20 border border-yellow-700/50 rounded-xl">
-                    <h3 className="font-bold text-yellow-500 mb-2">⚠️ Market Not Active</h3>
-                    <p className="text-sm text-gray-400 mb-4">You are the creator. You must add liquidity to start trading.</p>
-                    <button onClick={handleAddLiquidity} disabled={isPending} className="w-full py-2 bg-yellow-600 hover:bg-yellow-700 rounded-lg font-bold">
-                        {isPending ? "Activating..." : "Initialize Market (Add 50% Liquidity)"}
-                    </button>
+                <div className="mb-8 p-6 bg-blue-900/20 border border-blue-500/30 rounded-xl">
+                    <h3 className="font-bold text-blue-400 mb-2 flex items-center gap-2">
+                        🚀 Launch Your Market
+                    </h3>
+                    <p className="text-sm text-gray-300 mb-4 leading-relaxed">
+                        As the creator, you must "seed" the market so others can trade. 
+                        This requires two steps: <br/>
+                        1. <strong>Approve</strong> the contract to access your USDC. <br/>
+                        2. <strong>Initialize</strong> the pool with 50% of your tokens and matching cash.
+                    </p>
+
+                    <div className="space-y-3">
+                        {/* STEP 1 BUTTON */}
+                        {!hasApproved ? (
+                             <button 
+                                onClick={handleApprove} 
+                                disabled={isPending} 
+                                className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold transition flex justify-center items-center gap-2"
+                            >
+                                {isPending ? "Processing..." : "Step 1: Approve USDC Permission"}
+                            </button>
+                        ) : (
+                             <div className="w-full py-3 bg-green-900/50 border border-green-500/50 text-green-400 rounded-lg font-bold text-center">
+                                ✅ USDC Approved
+                            </div>
+                        )}
+
+                        {/* STEP 2 BUTTON (Only visible if Step 1 is done) */}
+                        {hasApproved && (
+                            <button 
+                                onClick={handleInitialize} 
+                                disabled={isPending} 
+                                className="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold transition animate-pulse"
+                            >
+                                {isPending ? "Initializing..." : "Step 2: Initialize Market"}
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
@@ -140,9 +209,10 @@ export default function AssetDetails() {
             </div>
 
             {/* SWAP BOX */}
-            <div className="p-6 bg-zinc-900 rounded-2xl border border-zinc-800">
+            <div className={`p-6 bg-zinc-900 rounded-2xl border border-zinc-800 ${!tradingActive ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
                 <div className="flex justify-between mb-4">
                     <h3 className="font-bold text-xl">Quick Swap</h3>
+                    {!tradingActive && <span className="text-xs bg-yellow-600 text-black px-2 py-1 rounded font-bold">PAUSED</span>}
                     <div className="flex bg-black rounded-lg p-1">
                         <button 
                             onClick={() => setIsBuyMode(true)}
@@ -188,9 +258,6 @@ export default function AssetDetails() {
                         : (assetBalance ? parseFloat(formatEther(assetBalance as bigint)).toFixed(2) + " " + symbol : "0.00")}
                 </div>
             </div>
-            
-             {/* Buyout Section (Keep existing code or minimized version) */}
-             {/* ... You can leave the previous Buyout code here ... */}
         </div>
       </div>
     </main>
