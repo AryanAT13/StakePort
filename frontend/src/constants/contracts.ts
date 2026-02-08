@@ -23,6 +23,8 @@ export const REAL_WORLD_ASSET_ABI = parseAbi([
   "function totalSupply() view returns (uint256)",
   "function allowance(address owner, address spender) view returns (uint256)", // <--- NEW
 
+  "function sold() view returns (bool)",
+
   // --- Write Functions ---
   "function approve(address spender, uint256 amount) returns (bool)", // <--- NEW (Fixes your error)
   "function buyTokens(uint256 usdcInput) external",

@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { ASSET_FACTORY_ADDRESS, ASSET_FACTORY_ABI } from '../constants/contracts';
 import AssetCard from '../components/AssetCard';
 import MarketPulse from '../components/MarketPulse';
+import PortfolioValue from '../components/PortfolioValue';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -112,10 +113,11 @@ const { data: assetList } = useReadContract({
             </div>
           </div>
 
-          {/* Card 2: Portfolio (Static for now) */}
+{/* Card 2: Portfolio Value (Dynamic) */}
           <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800">
             <h3 className="text-gray-400 text-sm font-medium mb-2">Portfolio Value</h3>
-            <div className="text-3xl font-bold text-white">$0.00</div>
+            {/* Pass the asset list to the calculator */}
+            <PortfolioValue assetList={assetList as `0x${string}`[] || []} />
           </div>
 
           {/* Card 3: Action (Dynamic Input) */}
