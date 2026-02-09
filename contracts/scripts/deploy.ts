@@ -21,10 +21,6 @@ async function main() {
 
   console.log(`AssetFactory deployed to: ${factoryAddress}`);
 
-  // 3. Mint some initial fake money to yourself for testing (e.g. $1,000,000)
-  const mintAmount = ethers.parseUnits("1000000", 18);
-  await mockUSDC.mint(deployer.address, mintAmount);
-  console.log(`Minted $1,000,000 MockUSDC to deployer wallet`);
 }
 
 // Handle errors
