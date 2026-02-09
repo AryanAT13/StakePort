@@ -6,6 +6,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { REAL_WORLD_ASSET_ABI, ERC20_ABI, MOCK_USDC_ADDRESS } from '../../../constants/contracts';
 import { formatEther, parseEther } from 'viem';
 import { useState, useEffect } from 'react';
+import PriceChart from '../../../components/PriceChart';
 
 export default function AssetDetails() {
   const { address: assetAddress } = useParams();
@@ -195,6 +196,8 @@ export default function AssetDetails() {
                     </div>
                 </div>
             )}
+
+            <PriceChart assetAddress={assetAddress as string} />
         </div>
 
         {/* RIGHT: Trading Terminal */}
