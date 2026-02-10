@@ -8,7 +8,7 @@ contract MockUSDC is ERC20, Ownable {
     constructor(address initialOwner) ERC20("Mock USD Coin", "mUSDC") Ownable(initialOwner) {}
 
     // Function to give users fake money (The "Stripe" webhook will call this)
-    function mint(address to, uint256 amount) external onlyOwner {
+    function mint(address to, uint256 amount) public {
         _mint(to, amount);
     }
     
