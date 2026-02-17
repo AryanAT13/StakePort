@@ -18,6 +18,7 @@ contract TradeableAsset is ERC20, Ownable {
     uint256 public buyoutPrice;
     address public buyoutBuyer;
     bool public sold; 
+    uint256 public finalCashPerToken;
 
     // --- AMM STATE (This was missing!) ---
     bool public tradingActive;
@@ -118,29 +119,70 @@ contract TradeableAsset is ERC20, Ownable {
     }
 
     // --- EXISTING BUYOUT LOGIC ---
+
+    mapping(address => uint256) public buyoutShare;
+
     function initiateBuyout(uint256 _offerAmount) external {
         require(!sold, "Asset already sold");
-        require(!buyoutProposed, "Buyout already pending");
-        uint256 requiredAmount = valuation * 110 / 100; 
+        require(!buyoutProposed, "Buyout pending");
+        
+        uint256 requiredAmount = valuation * 125 / 100; 
         require(_offerAmount >= requiredAmount, "Offer too low");
+        
         require(paymentToken.transferFrom(msg.sender, address(this), _offerAmount), "Transfer failed");
 
         buyoutProposed = true;
         buyoutPrice = _offerAmount;
         buyoutBuyer = msg.sender;
         sold = true;
-        tradingActive = false; // Stop AMM
+        tradingActive = false;
+
+        // --- FIXED LOGIC ---
+
+        // 1. Get Total Cash
+        uint256 totalPot = paymentToken.balanceOf(address(this));
+
+        // 2. Count Total Supply (1000) - No burning!
+        // We distribute the pot across ALL 1000 tokens.
+        // Because the Contract holds tokens (Liquidity), the Contract earns a share of the Pot.
+        
+        finalCashPerToken = (totalPot * 1e18) / totalSupply();
+
+        // 3. SPECIAL STEP: Assign the Contract's share to the OWNER (Seller)
+        // The contract holds liquidity tokens. That value belongs to the Market Maker (Owner).
+        uint256 contractTokenBalance = balanceOf(address(this));
+        uint256 ownerLiquidityShare = (contractTokenBalance * finalCashPerToken) / 1e18;
+        
+        // We record this extra payout for the owner
+        buyoutShare[owner()] = ownerLiquidityShare;
+
+        // Burn the contract tokens now that we've accounted for their value
+        _burn(address(this), contractTokenBalance);
 
         emit BuyoutProposed(msg.sender, _offerAmount);
     }
 
     function cashOut() external {
-        require(sold, "Asset not sold yet");
+        require(sold, "Asset not sold");
         uint256 userBalance = balanceOf(msg.sender);
-        require(userBalance > 0, "No tokens to cash out");
-        uint256 share = (userBalance * buyoutPrice) / totalSupply();
-        _burn(msg.sender, userBalance);
+        
+        // 1. Calculate Standard Share (Held Tokens)
+        uint256 share = 0;
+        if (userBalance > 0) {
+            share = (userBalance * finalCashPerToken) / 1e18;
+            _burn(msg.sender, userBalance);
+        }
+
+        // 2. Add Special Liquidity Share (If user is Owner)
+        if (buyoutShare[msg.sender] > 0) {
+            share += buyoutShare[msg.sender];
+            buyoutShare[msg.sender] = 0; // Prevent double claim
+        }
+
+        require(share > 0, "Nothing to cash out");
         require(paymentToken.transfer(msg.sender, share), "Transfer failed");
+
         emit CashedOut(msg.sender, share);
     }
-}
+}    
+

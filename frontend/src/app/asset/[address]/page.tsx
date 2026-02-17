@@ -25,14 +25,13 @@ export default function AssetDetails() {
   
   // Status Checks
   const { data: tradingActive, refetch: refetchActive } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'tradingActive' });
-  // NEW: Check if asset is sold
   const { data: isSold, refetch: refetchSold } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'sold' });
 
   // Balances
   const { data: assetBalance, refetch: refetchAssetBal } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'balanceOf', args: [userAddress as `0x${string}`] });
   const { data: usdcBalance, refetch: refetchUsdcBal } = useReadContract({ address: MOCK_USDC_ADDRESS, abi: ERC20_ABI, functionName: 'balanceOf', args: [userAddress as `0x${string}`] });
 
-  // Allowances
+  // Allowances (USDC)
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: MOCK_USDC_ADDRESS,
     abi: ERC20_ABI,
@@ -47,14 +46,12 @@ export default function AssetDetails() {
   // Auto-refresh data after transaction
   useEffect(() => {
     if (isTxSuccess) {
-        // Reload page logic or refetch all
         refetchActive();
         refetchAllowance();
         refetchSold();
         refetchAssetBal();
         refetchUsdcBal();
-        alert("Transaction Confirmed!");
-        // Optional: window.location.reload(); 
+        // alert("Transaction Confirmed!"); // Optional: Remove alert for smoother UX
     }
     if (isTxError) {
         console.error("Transaction Failed:", txError);
@@ -64,16 +61,34 @@ export default function AssetDetails() {
 
 
   // --- HANDLERS ---
-  const handleApprove = () => {
+
+  // 1. Enable Trading (Massive Approval)
+  const handleEnableTrading = () => {
     writeContract({
         address: MOCK_USDC_ADDRESS,
         abi: ERC20_ABI,
         functionName: 'approve',
-        args: [assetAddress as `0x${string}`, parseEther("100000000")] // Infinite Approve
+        args: [assetAddress as `0x${string}`, parseEther("1000000000")] // 1 Billion USDC (Huge amount)
     });
   };
 
+// 2. Initialize Market (Creator only)
   const handleInitialize = () => {
+      // Logic check 1: Ensure creator approves first
+      if (allowance && (allowance as bigint) === 0n) {
+          handleEnableTrading();
+          return;
+      }
+
+      // Logic Check 2: Check if user has enough USDC (50% of Valuation)
+      const requiredUSDC = valuation ? (valuation as bigint) / 2n : 0n;
+      const currentBalance = usdcBalance ? (usdcBalance as bigint) : 0n;
+
+      if (currentBalance < requiredUSDC) {
+          alert(`Insufficient Funds! \n\nTo initialize this market, you need to provide 50% liquidity: $${parseFloat(formatEther(requiredUSDC)).toLocaleString()} USDC.\n\nPlease go to the Dashboard and 'Add Funds' first.`);
+          return;
+      }
+
       writeContract({
         address: assetAddress as `0x${string}`,
         abi: REAL_WORLD_ASSET_ABI,
@@ -83,19 +98,22 @@ export default function AssetDetails() {
       });
   };
 
+  // 3. Trade (Buy/Sell)
   const handleTrade = () => {
-    if (!amount) return;
+    if (!amount || !userAddress) return;
     const parsedAmount = parseEther(amount);
+
     if (isBuyMode) {
-        // Simple Buy
+        // Simple Buy (We assume approval is done via the Enable button)
          writeContract({
             address: assetAddress as `0x${string}`,
             abi: REAL_WORLD_ASSET_ABI,
             functionName: 'buyTokens',
-            args: [parsedAmount]
+            args: [parsedAmount],
+            gas: BigInt(5000000)
         });
     } else {
-        // Simple Sell (Approve first if needed, but usually just Sell for MVP)
+        // Sell Logic (Approves asset then sells)
          writeContract({
             address: assetAddress as `0x${string}`,
             abi: REAL_WORLD_ASSET_ABI,
@@ -114,15 +132,14 @@ export default function AssetDetails() {
     }
   };
 
-  // NEW: Handle Hostile Buyout
+  // 4. Hostile Buyout
   const handleBuyout = () => {
     if (!valuation) return;
-    // Price = Valuation + 10%
-    const buyoutPrice = (valuation as bigint * 110n) / 100n;
+    const buyoutPrice = (valuation as bigint * 125n) / 100n;
     
-    // Check allowance first
+    // Safety check (Though UI should handle this)
     if (!allowance || (allowance as bigint) < buyoutPrice) {
-        handleApprove(); // Ask for approval if not enough
+        handleEnableTrading();
         return;
     }
 
@@ -134,7 +151,7 @@ export default function AssetDetails() {
     });
   };
 
-  // NEW: Handle Cash Out (Burning tokens for USDC)
+  // 5. Cash Out
   const handleCashOut = () => {
     writeContract({
         address: assetAddress as `0x${string}`,
@@ -145,8 +162,12 @@ export default function AssetDetails() {
 
   if (!name) return <div className="text-white p-10">Loading Asset...</div>;
 
+  // Logic Helpers
   const requiredAllowance = valuation ? (valuation as bigint) / 2n : 0n;
   const hasApproved = allowance ? (allowance as bigint) >= requiredAllowance : false;
+  
+  // UX: Does the user need to enable USDC? (Buy Mode + 0 Allowance)
+  const needsApproval = isBuyMode && (!allowance || (allowance as bigint) === 0n);
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -168,7 +189,7 @@ export default function AssetDetails() {
                     </div>
                  )}
 
-                 {/* SOLD Stamp (Show if sold) */}
+                 {/* SOLD Stamp */}
                  {isSold && (
                      <div className="absolute inset-0 flex items-center justify-center">
                          <div className="bg-red-600 text-white px-8 py-2 text-4xl font-black rotate-[-12deg] border-4 border-white shadow-xl">
@@ -178,14 +199,14 @@ export default function AssetDetails() {
                  )}
             </div>
             
-            {/* INITIALIZATION PANEL (Only if not active & not sold & user has balance) */}
+            {/* INITIALIZATION PANEL (Creator Only) */}
             {!tradingActive && !isSold && assetBalance && (assetBalance as bigint) > 0n && (
                 <div className="mb-8 p-6 bg-blue-900/20 border border-blue-500/30 rounded-xl">
-                    <h3 className="font-bold text-blue-400 mb-2">🚀 Launch Market</h3>
+                    <h3 className="font-bold text-blue-400 mb-2">Launch Market</h3>
                     <p className="text-sm text-gray-300 mb-4">Initialize the pool with 50% liquidity.</p>
                     <div className="space-y-3">
                         {!hasApproved ? (
-                             <button onClick={handleApprove} disabled={isPending} className="w-full py-3 bg-blue-600 rounded-lg font-bold">
+                             <button onClick={handleEnableTrading} disabled={isPending} className="w-full py-3 bg-blue-600 rounded-lg font-bold">
                                 Step 1: Approve USDC
                             </button>
                         ) : (
@@ -213,28 +234,44 @@ export default function AssetDetails() {
                     <div className="flex justify-between mb-4">
                         <h3 className="font-bold text-xl">Quick Swap</h3>
                         <div className="flex bg-black rounded-lg p-1">
-                            <button onClick={() => setIsBuyMode(true)} className={`px-4 py-1 rounded-md text-sm font-bold ${isBuyMode ? 'bg-green-600 text-white' : 'text-gray-500'}`}>BUY</button>
-                            <button onClick={() => setIsBuyMode(false)} className={`px-4 py-1 rounded-md text-sm font-bold ${!isBuyMode ? 'bg-red-600 text-white' : 'text-gray-500'}`}>SELL</button>
+                            <button onClick={() => setIsBuyMode(true)} className={`px-4 py-1 rounded-md text-sm font-bold transition ${isBuyMode ? 'bg-green-600 text-white' : 'text-gray-500'}`}>BUY</button>
+                            <button onClick={() => setIsBuyMode(false)} className={`px-4 py-1 rounded-md text-sm font-bold transition ${!isBuyMode ? 'bg-red-600 text-white' : 'text-gray-500'}`}>SELL</button>
                         </div>
                     </div>
-                    <div className="space-y-4">
-                         <div>
-                            <label className="text-xs text-gray-400 mb-1 block">
-                                {isBuyMode ? "You Pay (USDC)" : `You Sell (${symbol})`}
-                            </label>
-                            <input 
-                                type="number" 
-                                className="w-full bg-black border border-zinc-700 p-3 rounded-lg text-white font-mono text-lg focus:border-blue-500 focus:outline-none"
-                                placeholder="0.00"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                            />
+                    
+                    {/* UX IMPROVEMENT: Enable Button vs Trade Input */}
+                    {needsApproval ? (
+                        <div className="text-center py-6 bg-black/20 rounded-xl border border-zinc-800 border-dashed">
+                            <p className="text-gray-400 mb-4 text-sm">To start trading this asset, you must enable USDC spending.</p>
+                            <button 
+                                onClick={handleEnableTrading} 
+                                disabled={isPending}
+                                className="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold text-white transition flex items-center gap-2 mx-auto"
+                            >
+                                {isPending ? "Approving..." : "🔓 Enable Trading"}
+                            </button>
                         </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs text-gray-400 mb-1 block">
+                                    {isBuyMode ? "You Pay (USDC)" : `You Sell (${symbol})`}
+                                </label>
+                                <input 
+                                    type="number" 
+                                    className="w-full bg-black border border-zinc-700 p-3 rounded-lg text-white font-mono text-lg focus:border-blue-500 focus:outline-none"
+                                    placeholder="0.00"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                />
+                            </div>
 
-                        <button onClick={handleTrade} disabled={isPending} className={`w-full py-4 rounded-lg font-bold text-lg ${isBuyMode ? 'bg-green-600' : 'bg-red-600'}`}>
-                            {isPending ? "Processing..." : (isBuyMode ? "Buy Tokens" : "Sell Tokens")}
-                        </button>
-                    </div>
+                            <button onClick={handleTrade} disabled={isPending} className={`w-full py-4 rounded-lg font-bold text-lg transition ${isBuyMode ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                                {isPending ? "Processing..." : (isBuyMode ? "Buy Tokens" : "Sell Tokens")}
+                            </button>
+                        </div>
+                    )}
+                    
                     <div className="mt-4 text-xs text-center text-gray-500">
                         Balance: {isBuyMode 
                             ? (usdcBalance ? parseFloat(formatEther(usdcBalance as bigint)).toFixed(2) + " USDC" : "0.00") 
@@ -264,24 +301,36 @@ export default function AssetDetails() {
                 </div>
             )}
 
-            {/* SCENARIO 3: HOSTILE TAKEOVER (Only show if NOT sold and valuation exists) */}
+            {/* SCENARIO 3: HOSTILE TAKEOVER */}
             {!isSold && valuation && (
                 <div className="p-8 bg-gradient-to-br from-red-900/20 to-black border border-red-900/50 rounded-2xl opacity-80 hover:opacity-100 transition">
                     <h3 className="text-xl font-bold text-red-500 mb-2">🔥 Hostile Buyout</h3>
                     <p className="text-gray-400 mb-4 text-xs">
-                        Pay full valuation + 10% premium to acquire 100% of this asset immediately.
+                        Pay full valuation + 25% premium to acquire 100% of this asset immediately.
                     </p>
                     <div className="flex justify-between items-center mb-4 font-mono text-sm">
                         <span className="text-gray-400">Buyout Price:</span>
-                        <span className="text-white font-bold">${(parseInt(formatEther(valuation as bigint)) * 1.1).toLocaleString()}</span>
+                        <span className="text-white font-bold">${(parseInt(formatEther(valuation as bigint)) * 1.25).toLocaleString()}</span>
                     </div>
-                    <button 
-                        onClick={handleBuyout}
-                        disabled={isPending}
-                        className="w-full py-3 bg-zinc-800 hover:bg-red-900 border border-zinc-700 hover:border-red-500 rounded-lg font-bold transition text-sm text-gray-300 hover:text-white"
-                    >
-                        Initiate Takeover
-                    </button>
+                    
+                    {/* UX: Check allowance for Buyout too */}
+                    {!allowance || (allowance as bigint) < ((valuation as bigint * 125n) / 100n) ? (
+                         <button 
+                            onClick={handleEnableTrading}
+                            disabled={isPending}
+                            className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg font-bold transition text-sm text-gray-300 hover:text-white"
+                        >
+                            Enable Buyout (Approve USDC)
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={handleBuyout}
+                            disabled={isPending}
+                            className="w-full py-3 bg-red-900/50 hover:bg-red-900 border border-red-500/50 hover:border-red-500 rounded-lg font-bold transition text-sm text-red-200 hover:text-white"
+                        >
+                            Initiate Takeover
+                        </button>
+                    )}
                 </div>
             )}
 
