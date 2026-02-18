@@ -15,6 +15,7 @@ export default function AssetDetails() {
   // State
   const [amount, setAmount] = useState('');
   const [isBuyMode, setIsBuyMode] = useState(true);
+  
 
   // --- READS ---
   const { data: name } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'assetName' });
@@ -22,6 +23,12 @@ export default function AssetDetails() {
   const { data: valuation } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'valuation' });
   const { data: imageUrl } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'assetUrl' });
   const { data: currentPrice } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'getPrice' });
+
+  const { data: totalSupply } = useReadContract({ 
+      address: assetAddress as `0x${string}`, 
+      abi: REAL_WORLD_ASSET_ABI, 
+      functionName: 'totalSupply' 
+  });
   
   // Status Checks
   const { data: tradingActive, refetch: refetchActive } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'tradingActive' });
@@ -132,13 +139,33 @@ export default function AssetDetails() {
     }
   };
 
-  // 4. Hostile Buyout
+  // --- DYNAMIC BUYOUT PRICE HELPER ---
+  // Calculates the higher value between (Valuation) vs (Market Cap), then adds 25% premium
+  const getDynamicBuyoutPrice = () => {
+      if (!valuation) return 0n;
+
+      let baseValue = valuation as bigint;
+
+      // If trading is active, check if Market Cap is higher than Valuation
+      if (tradingActive && currentPrice && totalSupply) {
+          const marketCap = ((currentPrice as bigint) * (totalSupply as bigint)) / parseEther("1");
+          if (marketCap > baseValue) {
+              baseValue = marketCap;
+          }
+      }
+
+      // Apply 25% Premium (Multiplier 125/100)
+      return (baseValue * 125n) / 100n;
+  };
+
+  const dynamicBuyoutPrice = getDynamicBuyoutPrice();
+
+  // 4. Hostile Buyout (UPDATED)
   const handleBuyout = () => {
-    if (!valuation) return;
-    const buyoutPrice = (valuation as bigint * 125n) / 100n;
+    if (dynamicBuyoutPrice === 0n) return;
     
-    // Safety check (Though UI should handle this)
-    if (!allowance || (allowance as bigint) < buyoutPrice) {
+    // Safety check: Compare allowance against the DYNAMIC price
+    if (!allowance || (allowance as bigint) < dynamicBuyoutPrice) {
         handleEnableTrading();
         return;
     }
@@ -147,7 +174,7 @@ export default function AssetDetails() {
         address: assetAddress as `0x${string}`,
         abi: REAL_WORLD_ASSET_ABI,
         functionName: 'initiateBuyout',
-        args: [buyoutPrice]
+        args: [dynamicBuyoutPrice]
     });
   };
 
@@ -305,17 +332,23 @@ export default function AssetDetails() {
             {!isSold && valuation && (
                 <div className="p-8 bg-gradient-to-br from-red-900/20 to-black border border-red-900/50 rounded-2xl opacity-80 hover:opacity-100 transition">
                     <h3 className="text-xl font-bold text-red-500 mb-2">🔥 Hostile Buyout</h3>
+                    
+                    {/* Updated Text Description */}
                     <p className="text-gray-400 mb-4 text-xs">
-                        Pay full valuation + 25% premium to acquire 100% of this asset immediately.
+                        Pay Market Value (or Valuation) + 25% premium to acquire 100% of this asset immediately.
                     </p>
+
                     <div className="flex justify-between items-center mb-4 font-mono text-sm">
                         <span className="text-gray-400">Buyout Price:</span>
-                        <span className="text-white font-bold">${(parseInt(formatEther(valuation as bigint)) * 1.25).toLocaleString()}</span>
+                        {/* Updated to show dynamicBuyoutPrice */}
+                        <span className="text-white font-bold">
+                            ${parseFloat(formatEther(dynamicBuyoutPrice)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
                     </div>
                     
-                    {/* UX: Check allowance for Buyout too */}
-                    {!allowance || (allowance as bigint) < ((valuation as bigint * 125n) / 100n) ? (
-                         <button 
+                    {/* Updated Logic: Check allowance against dynamicBuyoutPrice */}
+                    {!allowance || (allowance as bigint) < dynamicBuyoutPrice ? (
+                          <button 
                             onClick={handleEnableTrading}
                             disabled={isPending}
                             className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg font-bold transition text-sm text-gray-300 hover:text-white"

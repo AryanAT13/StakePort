@@ -26,7 +26,7 @@ export const REAL_WORLD_ASSET_ABI = parseAbi([
   "function sold() view returns (bool)",
 
   // --- Write Functions ---
-  "function approve(address spender, uint256 amount) returns (bool)", // <--- NEW (Fixes your error)
+  "function approve(address spender, uint256 amount) returns (bool)", 
   "function buyTokens(uint256 usdcInput) external",
   "function sellTokens(uint256 tokenInput) external",
   "function addLiquidity(uint256 tokenAmount) external",

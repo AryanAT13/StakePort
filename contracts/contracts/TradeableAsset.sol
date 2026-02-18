@@ -126,9 +126,28 @@ contract TradeableAsset is ERC20, Ownable {
         require(!sold, "Asset already sold");
         require(!buyoutProposed, "Buyout pending");
         
-        uint256 requiredAmount = valuation * 125 / 100; 
-        require(_offerAmount >= requiredAmount, "Offer too low");
+        // --- 1. DYNAMIC PRICE CHECK ---
+        uint256 baseValuation = valuation;
         
+        // Calculate Current Market Cap (Price * Total Supply)
+        // If trading is active, use the AMM price. If not, use initial valuation.
+        if (tradingActive && totalSupply() > 0) {
+            uint256 currentPrice = getPrice(); // Price per token (1e18 precision)
+            // Market Cap = (Price * Total Supply) / 1e18
+            uint256 marketCap = (currentPrice * totalSupply()) / 1e18;
+            
+            // If the market cap is higher than initial valuation, use that as the base
+            if (marketCap > baseValuation) {
+                baseValuation = marketCap;
+            }
+        }
+
+        // Require 25% Premium on the HIGHER of (Valuation vs Market Cap)
+        uint256 requiredAmount = (baseValuation * 125) / 100;
+        
+        require(_offerAmount >= requiredAmount, "Offer too low (Must cover Market Cap + 25%)");
+        
+        // Transfer money in
         require(paymentToken.transferFrom(msg.sender, address(this), _offerAmount), "Transfer failed");
 
         buyoutProposed = true;
@@ -137,27 +156,32 @@ contract TradeableAsset is ERC20, Ownable {
         sold = true;
         tradingActive = false;
 
-        // --- FIXED LOGIC ---
+        // --- 2. PAYOUT LOGIC (The "Everything Pot") ---
 
-        // 1. Get Total Cash
+        // The Total Pot is simply ALL the money in the contract now.
+        // This includes:
+        // 1. The Buyout Money ($62.5k+)
+        // 2. The Liquidity Pool Cash (e.g., $192k from your example)
         uint256 totalPot = paymentToken.balanceOf(address(this));
 
-        // 2. Count Total Supply (1000) - No burning!
-        // We distribute the pot across ALL 1000 tokens.
-        // Because the Contract holds tokens (Liquidity), the Contract earns a share of the Pot.
+        // We distribute this pot to ALL Token Holders proportional to their share.
+        // Total Supply = 1000.
+        // Value Per Token = Total Pot / 1000.
         
         finalCashPerToken = (totalPot * 1e18) / totalSupply();
 
-        // 3. SPECIAL STEP: Assign the Contract's share to the OWNER (Seller)
-        // The contract holds liquidity tokens. That value belongs to the Market Maker (Owner).
+        // 3. OWNER LIQUIDITY FIX
+        // The Contract itself holds tokens (the liquidity reserve).
+        // Since the Owner provided this liquidity, the Owner gets the value of these tokens.
         uint256 contractTokenBalance = balanceOf(address(this));
-        uint256 ownerLiquidityShare = (contractTokenBalance * finalCashPerToken) / 1e18;
         
-        // We record this extra payout for the owner
-        buyoutShare[owner()] = ownerLiquidityShare;
-
-        // Burn the contract tokens now that we've accounted for their value
-        _burn(address(this), contractTokenBalance);
+        if (contractTokenBalance > 0) {
+            uint256 liquidityValue = (contractTokenBalance * finalCashPerToken) / 1e18;
+            buyoutShare[owner()] = liquidityValue;
+            
+            // Burn the contract tokens so they don't count as a "user" later
+            _burn(address(this), contractTokenBalance);
+        }
 
         emit BuyoutProposed(msg.sender, _offerAmount);
     }
