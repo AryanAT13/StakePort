@@ -21,9 +21,9 @@ export const REAL_WORLD_ASSET_ABI = parseAbi([
   "function tradingActive() view returns (bool)",
   "function balanceOf(address account) view returns (uint256)",
   "function totalSupply() view returns (uint256)",
-  "function allowance(address owner, address spender) view returns (uint256)", // <--- NEW
-
+  "function allowance(address owner, address spender) view returns (uint256)",
   "function sold() view returns (bool)",
+  "function owner() view returns (address)", // <--- ADDED HERE
 
   // --- Write Functions ---
   "function approve(address spender, uint256 amount) returns (bool)", 

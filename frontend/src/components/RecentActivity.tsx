@@ -35,8 +35,6 @@ export default function RecentActivity() {
         const allLogs: Activity[] = [];
 
         // 2. Scan each asset for recent trades (Last 100 blocks)
-        // Note: In production, you would use a Subgraph (The Graph) for this, 
-        // because looping 100 assets is slow. For MVP, it's fine.
         for (const asset of assets) {
             const name = await publicClient.readContract({
                 address: asset,
@@ -52,10 +50,16 @@ export default function RecentActivity() {
             });
 
             logs.forEach(log => {
+                const action = log.args.action as string;
+                
+                // FIXED: Swap variables based on the trade direction
+                // If BUY, tokens received are amountOut. If SELL, tokens sold are amountIn.
+                const tokenAmount = action === 'BUY' ? log.args.amountOut : log.args.amountIn;
+
                 allLogs.push({
                     hash: log.transactionHash,
-                    action: log.args.action as string,
-                    amount: parseFloat(formatEther(log.args.amountOut as bigint)).toFixed(2),
+                    action: action,
+                    amount: parseFloat(formatEther(tokenAmount as bigint)).toFixed(2),
                     price: parseFloat(formatEther(log.args.newPrice as bigint)).toFixed(2),
                     assetName: name,
                     time: "Just now" // We'll skip timestamp fetching for speed
@@ -64,7 +68,6 @@ export default function RecentActivity() {
         }
 
         // Sort by "Newest" (assuming logs come in order, we reverse)
-        // In real app, sort by blockNumber
         setActivities(allLogs.reverse().slice(0, 5)); // Show top 5
 
       } catch (e) {
@@ -107,6 +110,7 @@ export default function RecentActivity() {
                         <a 
                             href={`https://etherscan.io/tx/${act.hash}`} 
                             target="_blank" 
+                            rel="noopener noreferrer"
                             className="text-xs text-blue-500 hover:text-blue-400"
                         >
                             View ↗

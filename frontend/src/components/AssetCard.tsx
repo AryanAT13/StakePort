@@ -4,6 +4,7 @@ import { useReadContract } from 'wagmi';
 import { REAL_WORLD_ASSET_ABI } from '../constants/contracts';
 import { formatEther } from 'viem';
 import Link from 'next/link';
+import { ArrowUpRight } from 'lucide-react';
 
 // This component takes an address, fetches details, and shows the card
 export default function AssetCard({ assetAddress }: { assetAddress: `0x${string}` }) {
@@ -40,40 +41,39 @@ export default function AssetCard({ assetAddress }: { assetAddress: `0x${string}
   if (!name) return <div className="animate-pulse bg-zinc-900 h-64 rounded-xl"></div>;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden hover:border-blue-500 transition group relative">
-      
-      {/* Asset Image */}
-      <div className="h-48 w-full relative overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img 
-            src={imageUrl as string || "https://placehold.co/600x400/1a1a1a/FFF?text=No+Image"} 
-            alt="Asset" 
-            className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-        />
-        {/* Status Badge */}
-        <div className="absolute top-2 right-2">
-            {isSold ? (
-                <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">SOLD</span>
-            ) : (
-                <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">LIVE</span>
-            )}
+    <Link href={`/asset/${assetAddress}`}>
+        <div className="group bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600 rounded-lg p-3 cursor-pointer transition-all hover:bg-zinc-900 relative">
+            
+            {/* Header: Icon & Live Status */}
+            <div className="flex justify-between items-start mb-3">
+                <div className="relative w-12 h-12 rounded-md overflow-hidden bg-zinc-800">
+                    <img src={imageUrl as string} alt="Icon" className="object-cover w-full h-full" />
+                </div>
+                {isSold ? (
+                     <span className="text-[10px] font-bold uppercase tracking-wider text-red-500 bg-red-500/10 px-2 py-1 rounded">Sold</span>
+                ) : (
+                    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-green-500 bg-green-500/10 px-2 py-1 rounded">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Live
+                    </span>
+                )}
+            </div>
+
+            {/* Title */}
+            <h3 className="text-sm font-bold text-white mb-1 line-clamp-2 leading-tight group-hover:text-blue-400 transition-colors">
+                {name as string}
+            </h3>
+
+            {/* Metric Row */}
+            <div className="flex justify-between items-end mt-4">
+                <div>
+                    <p className="text-xs text-zinc-500 mb-0.5">Valuation</p>
+                    <p className="text-white font-mono font-medium">
+                        ${parseInt(formatEther(valuation as bigint || 0n)).toLocaleString()}
+                    </p>
+                </div>
+                <ArrowUpRight className="w-4 h-4 text-zinc-600 group-hover:text-white transition-colors" />
+            </div>
         </div>
-      </div>
-
-      {/* Details */}
-      <div className="p-4">
-        <h3 className="text-xl font-bold text-white mb-1">{name as string}</h3>
-        <p className="text-gray-400 text-sm mb-4">
-            Valuation: <span className="text-white font-mono">${parseInt(formatEther(valuation as bigint || 0n)).toLocaleString()}</span>
-        </p>
-
-        {/* Action Button */}
-        <Link href={`/asset/${assetAddress}`}>
-            <button className="w-full py-2 bg-zinc-800 hover:bg-blue-600 text-white rounded-lg font-medium transition">
-                View Details
-            </button>
-        </Link>
-      </div>
-    </div>
+    </Link>
   );
 }

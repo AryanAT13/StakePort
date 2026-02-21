@@ -95,110 +95,52 @@ const { data: assetList } = useReadContract({
       <Navbar />
       <MarketPulse />
 
-      <div className="max-w-6xl mx-auto p-8">
+      <div className="max-w-7xl mx-auto p-6">
         
-        {/* HEADER */}
-        <header className="mb-8">
-          <h1 className="text-5xl font-extrabold mb-4">
-            Welcome, <span className="text-blue-500">Boss.</span>
-          </h1>
-          <p className="text-gray-400 text-lg">
-            Your decentralized gateway to high-value real world assets.
-          </p>
-        </header>
-
-        {/* MAIN GRID LAYOUT */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* LEFT COLUMN (Stats & Assets) */}
-          <div className="lg:col-span-2 space-y-8">
-            
-            {/* 1. TOP STATS GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                
-                {/* Card: Portfolio Value */}
-                <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800">
-                    <h3 className="text-gray-400 text-sm font-medium mb-2">Portfolio Value</h3>
-                    <PortfolioValue assetList={assetList as `0x${string}`[] || []} />
-                </div>
-
-                {/* Card: Available Liquidity */}
-                <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800">
-                    <h3 className="text-gray-400 text-sm font-medium mb-2">Available Liquidity</h3>
-                    <div className="text-3xl font-bold text-white">
-                        ${parseFloat(balance).toLocaleString()} <span className="text-sm text-gray-500">USDC</span>
-                    </div>
-                </div>
-
-                {/* Card: Add Funds (Full Width) */}
-                <div className="col-span-1 sm:col-span-2 p-6 rounded-2xl bg-zinc-900 border border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div>
-                        <h3 className="text-gray-400 text-sm font-medium mb-1">Add Funds (Stripe Test)</h3>
-                        <p className="text-xs text-gray-500">Mint free MockUSDC to test the platform.</p>
-                    </div>
-                    
-                    {isConnected ? (
-                    <div className="flex gap-2 w-full sm:w-auto">
-                        <input 
-                        type="number" 
-                        placeholder="Amount (e.g. 5000)"
-                        className="w-full sm:w-32 bg-black border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-                        value={mintAmount}
-                        onChange={(e) => setMintAmount(e.target.value)}
-                        />
-                        <button 
-                        onClick={handleAddFunds}
-                        disabled={isPending}
-                        className="whitespace-nowrap py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition disabled:opacity-50"
-                        >
-                        {isPending ? "..." : "Add"}
-                        </button>
-                    </div>
-                    ) : (
-                    <div className="text-sm text-yellow-500">Connect Wallet to trade</div>
-                    )}
-                </div>
+        {/* Simple Header */}
+        <div className="flex justify-between items-end mb-8">
+            <div>
+                <h1 className="text-3xl font-bold text-white">Markets</h1>
+                <p className="text-zinc-400 text-sm mt-1">Trade fractional ownership of high-value assets.</p>
             </div>
+            {/* Optional Filter Tabs could go here */}
+        </div>
 
-            {/* 2. TRENDING ASSETS SECTION */}
-            <section>
-                <div className="flex justify-between items-end mb-6">
-                    <h2 className="text-2xl font-bold flex items-center gap-2">
-                        <span className="text-blue-500">💎</span> Trending Assets
-                    </h2>
-                    <span className="text-gray-500 text-sm">
-                        {assetList ? (assetList as []).length : 0} Assets Listed
-                    </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Loading State */}
-                    {!assetList && (
-                        <div className="text-gray-500 col-span-full text-center py-12">
-                            Loading assets from blockchain...
-                        </div>
-                    )}
-
-                    {/* Empty State */}
-                    {assetList && (assetList as []).length === 0 && (
-                        <div className="p-12 border border-dashed border-zinc-800 rounded-2xl text-center text-gray-500 col-span-full">
-                            No assets listed yet.
-                        </div>
-                    )}
-
-                    {/* Asset Cards */}
-                    {assetList && (assetList as `0x${string}`[]).map((address) => (
-                        <AssetCard key={address} assetAddress={address} />
-                    ))}
-                </div>
-            </section>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          
+          {/* MAIN ASSET GRID (Span 3) */}
+          <div className="lg:col-span-3">
+             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Loading/Empty States */}
+                {!assetList && <div className="text-zinc-500 text-sm">Loading markets...</div>}
+                
+                {/* Render Cards */}
+                {assetList && (assetList as `0x${string}`[]).map((address) => (
+                    <AssetCard key={address} assetAddress={address} />
+                ))}
+             </div>
           </div>
 
-          {/* RIGHT COLUMN (Live Activity Feed) */}
-          <div className="lg:col-span-1">
-             <div className="sticky top-8"> {/* Keeps it visible while scrolling */}
-                <RecentActivity />
+          {/* RIGHT SIDEBAR (Stats & Activity) */}
+          <div className="lg:col-span-1 space-y-6">
+             
+             {/* Mini Portfolio */}
+             <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                 <p className="text-xs text-zinc-500 uppercase font-bold mb-2">Your Portfolio</p>
+                 <PortfolioValue assetList={assetList as `0x${string}`[] || []} />
+                 <div className="mt-4 pt-4 border-t border-zinc-800">
+                    <p className="text-xs text-zinc-500 mb-1">Cash Balance</p>
+                    <p className="text-xl font-mono">${parseFloat(balance).toLocaleString()}</p>
+                 </div>
+                 {/* Mini Add Funds */}
+                 <div className="mt-4 flex gap-2">
+                    <input type="number" placeholder="5000" className="w-full bg-black border border-zinc-700 rounded px-2 py-1 text-sm" value={mintAmount} onChange={e => setMintAmount(e.target.value)} />
+                    <button onClick={handleAddFunds} className="bg-zinc-700 hover:bg-zinc-600 px-3 py-1 rounded text-xs font-bold">+</button>
+                 </div>
              </div>
+
+             {/* Activity Feed */}
+             <RecentActivity />
           </div>
 
         </div>

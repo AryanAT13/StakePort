@@ -123,6 +123,7 @@ contract TradeableAsset is ERC20, Ownable {
     mapping(address => uint256) public buyoutShare;
 
     function initiateBuyout(uint256 _offerAmount) external {
+        require(msg.sender != owner(), "Creator cannot initiate buyout");
         require(!sold, "Asset already sold");
         require(!buyoutProposed, "Buyout pending");
         
