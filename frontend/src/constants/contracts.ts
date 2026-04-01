@@ -1,10 +1,8 @@
 import { parseAbi } from 'viem';
 
-// 1. The Addresses (Added 'as const' to fix the TS error)
 export const MOCK_USDC_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3" as const;
 export const ASSET_FACTORY_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" as const;
 
-// 2. The ABIs
 export const ASSET_FACTORY_ABI = parseAbi([
   "function createAsset(string _name, string _symbol, string _url, uint256 _valuation) external",
   "function getDeployedAssets() external view returns (address[])",
@@ -12,7 +10,7 @@ export const ASSET_FACTORY_ABI = parseAbi([
 ]);
 
 export const REAL_WORLD_ASSET_ABI = parseAbi([
-  // --- View Functions ---
+
   "function assetName() view returns (string)",
   "function symbol() view returns (string)",
   "function assetUrl() view returns (string)",
@@ -23,9 +21,9 @@ export const REAL_WORLD_ASSET_ABI = parseAbi([
   "function totalSupply() view returns (uint256)",
   "function allowance(address owner, address spender) view returns (uint256)",
   "function sold() view returns (bool)",
-  "function owner() view returns (address)", // <--- ADDED HERE
+  "function owner() view returns (address)", 
 
-  // --- Write Functions ---
+
   "function approve(address spender, uint256 amount) returns (bool)", 
   "function buyTokens(uint256 usdcInput) external",
   "function sellTokens(uint256 tokenInput) external",
@@ -33,7 +31,7 @@ export const REAL_WORLD_ASSET_ABI = parseAbi([
   "function initiateBuyout(uint256 _offerAmount) external",
   "function cashOut() external",
 
-  // --- Events ---
+
   "function buyoutProposed() view returns (bool)",
   "function buyoutPrice() view returns (uint256)"
 ]);
