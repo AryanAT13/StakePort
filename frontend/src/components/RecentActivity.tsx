@@ -25,7 +25,6 @@ export default function RecentActivity() {
   useEffect(() => {
     async function fetchGlobalActivity() {
       try {
-        // 1. Get All Assets first
         const assets = await publicClient.readContract({
             address: ASSET_FACTORY_ADDRESS,
             abi: ASSET_FACTORY_ABI,
@@ -34,7 +33,6 @@ export default function RecentActivity() {
 
         const allLogs: Activity[] = [];
 
-        // 2. Scan each asset for recent trades (Last 100 blocks)
         for (const asset of assets) {
             const name = await publicClient.readContract({
                 address: asset,
@@ -45,15 +43,12 @@ export default function RecentActivity() {
             const logs = await publicClient.getLogs({
                 address: asset,
                 event: parseAbiItem('event Traded(address indexed user, string action, uint256 amountIn, uint256 amountOut, uint256 newPrice)'),
-                fromBlock: 'earliest', // scan from beginning for now
+                fromBlock: 'earliest', 
                 toBlock: 'latest'
             });
 
             logs.forEach(log => {
                 const action = log.args.action as string;
-                
-                // FIXED: Swap variables based on the trade direction
-                // If BUY, tokens received are amountOut. If SELL, tokens sold are amountIn.
                 const tokenAmount = action === 'BUY' ? log.args.amountOut : log.args.amountIn;
 
                 allLogs.push({
@@ -62,13 +57,12 @@ export default function RecentActivity() {
                     amount: parseFloat(formatEther(tokenAmount as bigint)).toFixed(2),
                     price: parseFloat(formatEther(log.args.newPrice as bigint)).toFixed(2),
                     assetName: name,
-                    time: "Just now" // We'll skip timestamp fetching for speed
+                    time: "Just now"
                 });
             });
         }
 
-        // Sort by "Newest" (assuming logs come in order, we reverse)
-        setActivities(allLogs.reverse().slice(0, 5)); // Show top 5
+        setActivities(allLogs.reverse().slice(0, 5)); 
 
       } catch (e) {
         console.error("Activity fetch error:", e);
@@ -77,7 +71,6 @@ export default function RecentActivity() {
 
     fetchGlobalActivity();
     
-    // Optional: Poll every 10 seconds for new trades
     const interval = setInterval(fetchGlobalActivity, 10000);
     return () => clearInterval(interval);
   }, []);
