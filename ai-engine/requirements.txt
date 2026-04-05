@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+google-generativeai
+google-search-results
+scikit-learn
+numpy
+requests
+python-dotenv
+pillow
