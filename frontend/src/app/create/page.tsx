@@ -14,7 +14,11 @@ export default function CreateAsset() {
   const [name, setName] = useState('');
   const [symbol, setSymbol] = useState('');
   const [valuation, setValuation] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  
+  // ADD THESE 3 LINES:
+  const [description, setDescription] = useState('');
+  const [files, setFiles] = useState<FileList | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Write Hook
   const { data: hash, writeContract, isPending, error } = useWriteContract();
@@ -24,28 +28,67 @@ export default function CreateAsset() {
     hash,
   });
 
-  // Handle Submit
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !symbol || !valuation || !imageUrl) {
-        alert("Please fill in all fields");
+    if (!name || !symbol || !valuation || !description || !files || files.length === 0) {
+        alert("Please fill in all fields and upload at least one image.");
         return;
     }
 
-    console.log("Creating Asset...");
+    try {
+        setIsUploading(true);
 
-    writeContract({
-      address: ASSET_FACTORY_ADDRESS,
-      abi: ASSET_FACTORY_ABI,
-      functionName: 'createAsset',
-      args: [
-        name, 
-        symbol, 
-        imageUrl, 
-        parseEther(valuation) // Convert "50000" to "50000000000000000000" (Wei)
-      ], 
-    });
+        // 1. Upload Images to IPFS
+        const imageUrls: string[] = [];
+        for (let i = 0; i < files.length; i++) {
+            const formData = new FormData();
+            formData.append("file", files[i]);
+            
+            const res = await fetch("/api/upload", { method: "POST", body: formData });
+            const data = await res.json();
+            // Format as an IPFS gateway link
+            imageUrls.push(`https://gateway.pinata.cloud/ipfs/${data.ipfsHash}`);
+        }
+
+        // 2. Create the Metadata JSON object
+        const metadata = {
+            name: name,
+            description: description,
+            images: imageUrls,
+        };
+
+        // 3. Upload Metadata JSON to IPFS
+        const jsonBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+        const jsonFile = new File([jsonBlob], "metadata.json");
+        const jsonFormData = new FormData();
+        jsonFormData.append("file", jsonFile);
+
+        const metaRes = await fetch("/api/upload", { method: "POST", body: jsonFormData });
+        const metaData = await metaRes.json();
+        
+        const finalIpfsUri = `https://gateway.pinata.cloud/ipfs/${metaData.ipfsHash}`;
+        console.log("Metadata uploaded to:", finalIpfsUri);
+
+        // 4. Trigger Smart Contract
+        writeContract({
+            address: ASSET_FACTORY_ADDRESS,
+            abi: ASSET_FACTORY_ABI,
+            functionName: 'createAsset',
+            args: [
+              name, 
+              symbol, 
+              finalIpfsUri, 
+              parseEther(valuation) 
+            ], 
+        });
+
+    } catch (err) {
+        console.error("Upload failed", err);
+        alert("Failed to upload to IPFS.");
+    } finally {
+        setIsUploading(false);
+    }
   };
 
   // Redirect on Success
@@ -102,25 +145,37 @@ export default function CreateAsset() {
                 />
             </div>
 
-            {/* Image URL Input (Temporary until we add upload) */}
+            {/* Description Input */}
             <div>
-                <label className="block text-gray-400 mb-2 text-sm">Image URL</label>
-                <input 
-                    type="text" 
-                    placeholder="https://example.com/watch.jpg"
-                    className="w-full bg-black border border-zinc-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
+                <label className="block text-gray-400 mb-2 text-sm">Short Description</label>
+                <textarea 
+                    placeholder="Describe the asset's history, condition, and why it's valuable..."
+                    className="w-full bg-black border border-zinc-700 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 h-24 resize-none"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                 />
+            </div>
+
+            {/* Multiple File Upload Input */}
+            <div>
+                <label className="block text-gray-400 mb-2 text-sm">Upload Asset Images</label>
+                <input 
+                    type="file" 
+                    multiple 
+                    accept="image/*"
+                    className="w-full bg-black border border-zinc-700 rounded-lg p-3 text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 cursor-pointer"
+                    onChange={(e) => setFiles(e.target.files)}
+                />
+                <p className="text-xs text-zinc-500 mt-2">Upload multiple images. Files are stored permanently on IPFS.</p>
             </div>
 
             {/* Submit Button */}
             <button 
                 type="submit"
-                disabled={isPending || isConfirming}
+                disabled={isPending || isConfirming || isUploading}
                 className="w-full py-4 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-lg transition disabled:opacity-50"
             >
-                {isPending ? "Check Wallet..." : isConfirming ? "Minting Asset..." : "🚀 Launch Asset"}
+                {isUploading ? "Uploading to IPFS..." : isPending ? "Check Wallet..." : isConfirming ? "Minting Asset..." : "🚀 Launch Asset"}
             </button>
 
             {/* Error Message */}

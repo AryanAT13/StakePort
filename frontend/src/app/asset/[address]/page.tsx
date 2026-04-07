@@ -14,13 +14,15 @@ const publicClient = createPublicClient({ chain: hardhat, transport: http() });
 export default function AssetDetails() {
   const { address: assetAddress } = useParams();
   const { address: userAddress } = useAccount();
+
+  const [aiDescription, setAiDescription] = useState<string>("Loading AI appraisal...");
+  const [fairValue, setFairValue] = useState<number | null>(null);
   
-  // State
   const [amount, setAmount] = useState('');
   const [isBuyMode, setIsBuyMode] = useState(true);
   const [totalVolume, setTotalVolume] = useState(0);
 
-  // --- READS ---
+
   const { data: name } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'assetName' });
   const { data: symbol } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'symbol' });
   const { data: valuation } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'valuation' });
@@ -34,15 +36,12 @@ export default function AssetDetails() {
       functionName: 'totalSupply' 
   });
   
-  // Status Checks
   const { data: tradingActive, refetch: refetchActive } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'tradingActive' });
   const { data: isSold, refetch: refetchSold } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'sold' });
 
-  // Balances
   const { data: assetBalance, refetch: refetchAssetBal } = useReadContract({ address: assetAddress as `0x${string}`, abi: REAL_WORLD_ASSET_ABI, functionName: 'balanceOf', args: [userAddress as `0x${string}`] });
   const { data: usdcBalance, refetch: refetchUsdcBal } = useReadContract({ address: MOCK_USDC_ADDRESS, abi: ERC20_ABI, functionName: 'balanceOf', args: [userAddress as `0x${string}`] });
 
-  // Allowances (USDC)
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     address: MOCK_USDC_ADDRESS,
     abi: ERC20_ABI,
@@ -296,6 +295,32 @@ export default function AssetDetails() {
                 </div>
             </div>
         </div>
+
+        {/* AI APPRAISAL SECTION */}
+<div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mt-6">
+    <div className="flex items-center justify-between mb-4">
+        <h3 className="font-bold text-lg flex items-center gap-2">
+            ✨ AI Appraiser Report
+        </h3>
+        {fairValue !== null && valuation && (
+            <div className={`px-3 py-1 rounded text-xs font-bold ${fairValue > parseInt(formatEther(valuation as bigint)) ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}`}>
+                Fair Value: ${fairValue.toLocaleString()}
+            </div>
+        )}
+    </div>
+    
+    {aiDescription === "Loading AI appraisal..." ? (
+        <div className="animate-pulse space-y-3">
+            <div className="h-4 bg-zinc-800 rounded w-3/4"></div>
+            <div className="h-4 bg-zinc-800 rounded w-full"></div>
+            <div className="h-4 bg-zinc-800 rounded w-5/6"></div>
+        </div>
+    ) : (
+        <p className="text-zinc-400 text-sm leading-relaxed whitespace-pre-line">
+            {aiDescription}
+        </p>
+    )}
+</div>
 
         {/* RIGHT: TRADING PANEL (Span 4) */}
         <div className="lg:col-span-4 space-y-4">
