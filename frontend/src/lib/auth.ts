@@ -1,6 +1,7 @@
+import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { serverEnv } from "./env";
+import { serverEnv } from "./env.server";
 
 /**
  * Session = a short-lived JWT in an HTTP-only cookie.
