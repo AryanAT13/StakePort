@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { serverEnv } from "@/lib/env";
+import { serverEnv } from "@/lib/env.server";
 import { normalizeAddress, resolveAsset } from "@/lib/assetMetadata";
 
 /**
