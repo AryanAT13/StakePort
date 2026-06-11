@@ -1,16 +1,26 @@
-import { parseAbi } from 'viem';
+import { parseAbi } from "viem";
+import { publicEnv } from "@/lib/env";
 
-export const MOCK_USDC_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3" as const;
-export const ASSET_FACTORY_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" as const;
+/**
+ * Single source of truth for on-chain integration.
+ *
+ * Addresses now come from env so we can swap network without recompiling. The
+ * ABIs stay in code — they're the contract surface we depend on, and pinning
+ * them prevents a silent breakage if someone redeploys with a different
+ * signature.
+ */
+
+export const MOCK_USDC_ADDRESS = publicEnv.mockUsdcAddress;
+export const ASSET_FACTORY_ADDRESS = publicEnv.assetFactoryAddress;
 
 export const ASSET_FACTORY_ABI = parseAbi([
   "function createAsset(string _name, string _symbol, string _url, uint256 _valuation) external",
   "function getDeployedAssets() external view returns (address[])",
-  "event AssetCreated(address indexed assetAddress, string name, address indexed owner)"
+  "event AssetCreated(address indexed assetAddress, string name, address indexed owner)",
 ]);
 
 export const REAL_WORLD_ASSET_ABI = parseAbi([
-
+  // --- reads ---
   "function assetName() view returns (string)",
   "function symbol() view returns (string)",
   "function assetUrl() view returns (string)",
@@ -21,19 +31,19 @@ export const REAL_WORLD_ASSET_ABI = parseAbi([
   "function totalSupply() view returns (uint256)",
   "function allowance(address owner, address spender) view returns (uint256)",
   "function sold() view returns (bool)",
-  "function owner() view returns (address)", 
-
-
-  "function approve(address spender, uint256 amount) returns (bool)", 
+  "function owner() view returns (address)",
+  // --- writes ---
+  "function approve(address spender, uint256 amount) returns (bool)",
   "function buyTokens(uint256 usdcInput) external",
   "function sellTokens(uint256 tokenInput) external",
   "function addLiquidity(uint256 tokenAmount) external",
   "function initiateBuyout(uint256 _offerAmount) external",
   "function cashOut() external",
-
-
+  // --- buyout state ---
   "function buyoutProposed() view returns (bool)",
-  "function buyoutPrice() view returns (uint256)"
+  "function buyoutPrice() view returns (uint256)",
+  // --- events (used by the chart + activity feed) ---
+  "event Traded(address indexed user, string action, uint256 amountIn, uint256 amountOut, uint256 newPrice)",
 ]);
 
 export const ERC20_ABI = parseAbi([
@@ -42,5 +52,5 @@ export const ERC20_ABI = parseAbi([
   "function approve(address spender, uint256 amount) external returns (bool)",
   "function allowance(address owner, address spender) view returns (uint256)",
   "function balanceOf(address account) view returns (uint256)",
-  "function mint(address to, uint256 amount) external" 
+  "function mint(address to, uint256 amount) external",
 ]);

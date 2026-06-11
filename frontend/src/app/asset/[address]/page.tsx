@@ -4,12 +4,12 @@ import Navbar from '../../../components/Navbar';
 import { useParams } from 'next/navigation';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { REAL_WORLD_ASSET_ABI, ERC20_ABI, MOCK_USDC_ADDRESS } from '../../../constants/contracts';
-import { formatEther, parseEther, createPublicClient, http, parseAbiItem } from 'viem';
-import { hardhat } from 'viem/chains';
+import { formatEther, parseEther, parseAbiItem } from 'viem';
 import { useState, useEffect } from 'react';
 import PriceChart from '../../../components/PriceChart';
+import { getClientPublicClient } from '@/lib/clientChain';
 
-const publicClient = createPublicClient({ chain: hardhat, transport: http() });
+const publicClient = getClientPublicClient();
 
 export default function AssetDetails() {
   const { address: assetAddress } = useParams();
@@ -70,6 +70,52 @@ export default function AssetDetails() {
         alert("Transaction Failed! Check console.");
     }
   }, [isTxSuccess, isTxError, txError, refetchActive, refetchAllowance, refetchSold, refetchAssetBal, refetchUsdcBal]);
+
+  // ---- AI APPRAISER + ML ORACLE ---------------------------------------------
+  // These fire once per asset page open. The endpoints cache server-side, so
+  // re-renders / refetches don't burn Gemini / SerpAPI credits. We don't
+  // block render on them; the panel just shows a skeleton until they land.
+  useEffect(() => {
+    if (!assetAddress) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch('/api/ai/prospectus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: assetAddress }),
+        });
+        const j = await res.json();
+        if (!cancelled) {
+          if (res.ok && j.prospectus) setAiDescription(j.prospectus);
+          else setAiDescription('AI appraisal unavailable for this asset.');
+        }
+      } catch {
+        if (!cancelled) setAiDescription('AI appraisal unavailable for this asset.');
+      }
+    })();
+
+    (async () => {
+      try {
+        const res = await fetch('/api/ai/fair-value', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: assetAddress }),
+        });
+        const j = await res.json();
+        if (!cancelled && res.ok && typeof j.fairValue === 'number') {
+          setFairValue(Math.round(j.fairValue));
+        }
+      } catch {
+        /* fair value is optional; silent on failure */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [assetAddress]);
 
   // Calculate Total Volume dynamically
   useEffect(() => {

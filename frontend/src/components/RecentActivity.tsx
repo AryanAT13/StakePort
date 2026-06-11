@@ -1,14 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createPublicClient, http, parseAbiItem, formatEther } from 'viem';
-import { hardhat } from 'viem/chains';
+import { parseAbiItem, formatEther } from 'viem';
 import { ASSET_FACTORY_ADDRESS, ASSET_FACTORY_ABI, REAL_WORLD_ASSET_ABI } from '../constants/contracts';
+import { getClientPublicClient, explorerTxUrl } from '@/lib/clientChain';
 
-const publicClient = createPublicClient({
-  chain: hardhat,
-  transport: http()
-});
+const publicClient = getClientPublicClient();
 
 type Activity = {
     hash: string;
@@ -100,14 +97,22 @@ export default function RecentActivity() {
                             </div>
                             <div className="text-xs text-zinc-500">Price: ${act.price}</div>
                         </div>
-                        <a 
-                            href={`https://etherscan.io/tx/${act.hash}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-xs text-blue-500 hover:text-blue-400"
-                        >
-                            View ↗
-                        </a>
+                        {/* Etherscan only makes sense on chains that have one. For local
+                            hardhat we just suppress the link rather than dump a 404 on users. */}
+                        {explorerTxUrl(act.hash) ? (
+                            <a
+                                href={explorerTxUrl(act.hash)!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-blue-500 hover:text-blue-400"
+                            >
+                                View ↗
+                            </a>
+                        ) : (
+                            <span className="text-[10px] font-mono text-zinc-600">
+                                {act.hash.slice(0, 6)}…{act.hash.slice(-4)}
+                            </span>
+                        )}
                     </div>
                 ))
             )}

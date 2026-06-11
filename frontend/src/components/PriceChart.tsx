@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, AreaSeries, Time } from 'lightweight-charts';
-import { createPublicClient, http, parseAbiItem, formatEther } from 'viem';
-import { hardhat } from 'viem/chains';
+import { parseAbiItem, formatEther } from 'viem';
+import { getClientPublicClient } from '@/lib/clientChain';
 
-const publicClient = createPublicClient({ chain: hardhat, transport: http() });
+// Shared singleton — was previously a per-component client hard-pinned to
+// hardhat, which broke as soon as we pointed the app at any other chain.
+const publicClient = getClientPublicClient();
 
 export default function PriceChart({ assetAddress }: { assetAddress: string }) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
