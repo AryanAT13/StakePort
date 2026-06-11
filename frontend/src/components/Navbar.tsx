@@ -6,9 +6,11 @@ import Link from 'next/link';
 export default function Navbar() {
   return (
     <nav className="w-full flex justify-between items-center p-6 border-b border-gray-800 bg-black text-white">
-      {/* Logo */}
+      {/* Logo. Inside the app we send users to the markets dashboard, not
+          the landing page — clicking the logo on a signed-in surface should
+          feel like "home", which here means the active trading view. */}
       <div className="text-2xl font-bold tracking-tighter">
-        <Link href="/">
+        <Link href="/markets">
           Stake<span className="text-blue-500">Port</span>
         </Link>
       </div>

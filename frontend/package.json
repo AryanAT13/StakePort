@@ -11,9 +11,12 @@
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "@rainbow-me/rainbowkit": "^2.2.10",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@tanstack/react-query": "^5.90.20",
     "classnames": "^2.5.1",
     "ethers": "^6.16.0",
+    "framer-motion": "^12.40.0",
     "lightweight-charts": "^5.1.0",
     "lucide-react": "^0.574.0",
     "next": "16.1.6",
@@ -22,6 +25,7 @@
     "react-dom": "19.2.3",
     "recharts": "^3.7.0",
     "siwe": "^3.0.0",
+    "three": "^0.184.0",
     "viem": "^2.45.1",
     "wagmi": "^2.19.5"
   },
@@ -30,6 +34,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.184.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",

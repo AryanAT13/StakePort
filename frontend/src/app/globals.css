@@ -1,41 +1,93 @@
 @import "tailwindcss";
 
+/* StakePort is a dark-mode-only product — we never want the body to flip to
+   white on light-mode OSes, which the old @media query was doing. Pure black
+   is the canvas; surfaces lift via zinc-900/zinc-800. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #ededed;
+  --accent: #3b82f6;
+  --accent-cyan: #06b6d4;
+  --gain: #22c55e;
+  --loss: #ef4444;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+::selection {
+  background: rgba(59, 130, 246, 0.35);
+  color: #fff;
+}
+
+/* Trading-grade scrollbar: thin, dark, blue-tinted thumb on hover. */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+
 @layer utilities {
+  /* Marquee — used by MarketPulse. The trick is the inner strip is duplicated
+     and we translate -50% so the loop seams at the duplicate boundary. */
   .animate-marquee {
-    /* Increased to 80s for slower speed */
     animation: marquee 80s linear infinite;
-    /* Ensure the strip is wide enough to not wrap */
     width: max-content;
+  }
+
+  /* Subtle grain overlay you can layer over any dark background block —
+     gives the "premium SaaS" texture without shipping a noise PNG. */
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Soft, slow glow used behind hero text + CTA chips. */
+  .glow-blue {
+    box-shadow: 0 0 60px -10px rgba(59, 130, 246, 0.5);
+  }
+
+  /* Animated gradient border — for the "Enter Terminal" button. */
+  .gradient-border {
+    position: relative;
+    background: linear-gradient(#0a0a0a, #0a0a0a) padding-box,
+                linear-gradient(135deg, #3b82f6, #06b6d4, #22c55e, #3b82f6) border-box;
+    background-size: 300% 300%;
+    border: 1px solid transparent;
+    animation: shimmer 6s ease infinite;
   }
 }
 
 @keyframes marquee {
   0% { transform: translateX(0%); }
-  /* Only move halfway. This is the secret to the perfect loop. */
   100% { transform: translateX(-50%); }
+}
+
+@keyframes shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.4); }
 }
