@@ -1,0 +1,84 @@
+// StakePort persistence layer.
+// SQLite for zero-config local dev; the schema is Postgres-clean so we can
+// flip the provider when we deploy without touching field types.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// One row per connected wallet. We treat the lowercased EVM address as the
+// natural key — `id` (cuid) is only used for foreign keys so we never leak
+// addresses into URLs unintentionally.
+model User {
+  id            String    @id @default(cuid())
+  walletAddress String    @unique
+  displayName   String?
+  avatarUrl     String?
+  ageConfirmed  Boolean   @default(false)
+  interests     String?   // JSON-encoded string[] — SQLite has no native array
+  riskProfile   String?   // 'conservative' | 'moderate' | 'aggressive'
+  onboardedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  trades        Trade[]
+
+  @@index([walletAddress])
+}
+
+// Cache for expensive AI / oracle calls keyed by the asset's deployed contract
+// address. Prospectus rarely changes (regenerate manually if seller edits
+// metadata); fair value has a TTL we honour in the API route, not the DB.
+model AssetMetadata {
+  id                String    @id @default(cuid())
+  contractAddress   String    @unique
+  name              String
+  symbol            String?
+  // --- AI prospectus (Gemini multimodal) ---
+  prospectus        String?
+  prospectusModel   String?
+  prospectusAt      DateTime?
+  // --- ML fair-value oracle (Isolation Forest + SerpAPI) ---
+  fairValue         Float?
+  fairValueCategory String?
+  fairValueStatus   String?
+  fairValueRaw      String?   // full JSON snapshot for audit / debugging
+  fairValueAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([contractAddress])
+}
+
+// We index every Traded event into the DB so portfolio P&L can be calculated
+// without re-scanning the chain on every page load. Writes are idempotent on
+// txHash so re-running an indexer is safe.
+model Trade {
+  id              String   @id @default(cuid())
+  userId          String?  // null = wallet we haven't seen a profile for yet
+  user            User?    @relation(fields: [userId], references: [id])
+  walletAddress   String
+  contractAddress String
+  txHash          String   @unique
+  action          String   // 'BUY' | 'SELL'
+  tokenAmount     String   // decimal string — bigint-safe across JSON
+  usdcAmount      String
+  priceAfter      String
+  blockNumber     Int
+  timestamp       DateTime
+  createdAt       DateTime @default(now())
+
+  @@index([walletAddress])
+  @@index([contractAddress])
+}
+
+// Short-lived SIWE nonces. We delete on use; a sweep job can prune anything
+// older than ~10 minutes.
+model AuthNonce {
+  nonce     String   @id
+  createdAt DateTime @default(now())
+}
