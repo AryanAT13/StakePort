@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
-/* StakePort is a dark-mode-only product — we never want the body to flip to
-   white on light-mode OSes, which the old @media query was doing. Pure black
-   is the canvas; surfaces lift via zinc-900/zinc-800. */
+/* StakePort is a dark-only product — we never want the body to flip to white
+   on light-mode OSes. Pure black is the canvas; surfaces lift via zinc-900/800.
+   Accent variables are exposed so component-level styles can reference them
+   without hard-coding hex values. */
 :root {
   --background: #000000;
   --foreground: #ededed;
@@ -30,45 +31,71 @@ body {
   color: #fff;
 }
 
-/* Trading-grade scrollbar: thin, dark, blue-tinted thumb on hover. */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
 
 @layer utilities {
-  /* Marquee — used by MarketPulse. The trick is the inner strip is duplicated
-     and we translate -50% so the loop seams at the duplicate boundary. */
+  /* Marquee — used by MarketPulse. The strip is duplicated and we translate
+     -50% so the loop seams at the duplicate boundary. */
   .animate-marquee {
     animation: marquee 80s linear infinite;
     width: max-content;
   }
 
-  /* Subtle grain overlay you can layer over any dark background block —
-     gives the "premium SaaS" texture without shipping a noise PNG. */
+  /* Subtle SVG grain you can layer over any block — gives texture without
+     shipping a noise PNG. The element needs position:relative for ::after to
+     anchor correctly. */
+  .grain {
+    position: relative;
+  }
   .grain::after {
     content: "";
     position: absolute;
     inset: 0;
     pointer-events: none;
-    opacity: 0.04;
+    opacity: 0.07;
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
-  /* Soft, slow glow used behind hero text + CTA chips. */
-  .glow-blue {
-    box-shadow: 0 0 60px -10px rgba(59, 130, 246, 0.5);
+  /* ---- Brushed-titanium wordmark -------------------------------------
+     Used by the cinematic footer. The text is filled with a transparent
+     gradient — bright zinc-100 specular highlights at the head and middle
+     of the letterforms, fading to deep zinc-900 at the tail. The alpha is
+     baked into the colour stops so this stays subtle without a global
+     opacity that would mute the highlights too. Pair with .grain on the
+     parent for the dusty industrial finish. */
+  .wordmark-metallic {
+    background-image: linear-gradient(
+      102deg,
+      rgba(250, 250, 252, 0.95) 0%,
+      rgba(228, 228, 231, 0.82) 6%,
+      rgba(255, 255, 255, 1.00) 12%,
+      rgba(180, 180, 188, 0.70) 22%,
+      rgba(120, 120, 130, 0.50) 38%,
+      rgba(225, 225, 230, 0.78) 48%,
+      rgba(140, 140, 150, 0.45) 56%,
+      rgba(82, 82, 91, 0.32) 72%,
+      rgba(45, 45, 50, 0.22) 86%,
+      rgba(20, 20, 24, 0.12) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
   }
 
-  /* Animated gradient border — for the "Enter Terminal" button. */
-  .gradient-border {
-    position: relative;
-    background: linear-gradient(#0a0a0a, #0a0a0a) padding-box,
-                linear-gradient(135deg, #3b82f6, #06b6d4, #22c55e, #3b82f6) border-box;
-    background-size: 300% 300%;
-    border: 1px solid transparent;
-    animation: shimmer 6s ease infinite;
+  /* Section eyebrow — small uppercase tag with the brand spacing.
+     Saves repeating the same className soup in every editorial section. */
+  .eyebrow {
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: rgb(113 113 122); /* zinc-500 */
+    font-weight: 500;
   }
 }
 
@@ -77,17 +104,7 @@ body {
   100% { transform: translateX(-50%); }
 }
 
-@keyframes shimmer {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.4); }
+  50% { transform: translateY(-6px); }
 }
