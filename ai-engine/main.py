@@ -54,7 +54,7 @@ async def generate_description(asset: AssetContext):
         response = requests.get(asset.image_url)
         img = Image.open(BytesIO(response.content))
 
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-3.5-flash')
         
         prompt = f"""
         You are an elite asset appraiser for a fractional ownership platform. 
@@ -74,7 +74,7 @@ async def generate_description(asset: AssetContext):
 @app.post("/api/fair-value")
 async def get_fair_value(asset: PricingContext):
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-3.5-flash')
         route_prompt = f"""
         Categorize the following asset: "{asset.name}".
         Reply with ONLY ONE of the following words:

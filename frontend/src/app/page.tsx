@@ -1,38 +1,38 @@
 'use client';
 
-// Public landing page. Composed of independent client components so each can
-// own its own data fetching / scroll behaviour without prop-drilling.
+// Public landing.
 //
-// We deliberately do NOT auto-redirect signed-in users away from this page.
-// The landing is the brand — it's fine for someone with a session to land
-// here from a marketing link; the persistent "Launch App" CTA in the nav
-// gets them to /markets in one click.
+// Narrative arc (matches the brief):
+//   Hero      — Vision + Problem (the manifesto)
+//   Reason    — Why we exist ("Real wealth deserves real markets")
+//   Mechanism — How it works (three editorial rails)
+//   Guarantee — The contract (125% buyout floor)
+//   CTA       — Action ("Open the terminal.")
+//   Footer    — Brushed-titanium wordmark close
+//
+// Manifesto.tsx was deleted: its content is now the hero. The "Real wealth
+// deserves real markets" line was promoted from the final CTA to a mid-page
+// section because, per the brief, it was the strongest sentence on the
+// previous draft and deserved earlier placement in the narrative.
 
 import LandingNav from '@/components/landing/LandingNav';
 import Hero from '@/components/landing/Hero';
-import MarketPulse from '@/components/MarketPulse';
-import StatsRow from '@/components/landing/StatsRow';
-import PillarsSection from '@/components/landing/PillarsSection';
-import HowItWorksSection from '@/components/landing/HowItWorksSection';
+import Reason from '@/components/landing/Reason';
+import Mechanism from '@/components/landing/Mechanism';
+import Guarantee from '@/components/landing/Guarantee';
 import CTASection from '@/components/landing/CTASection';
-import Footer from '@/components/landing/Footer';
+import WordmarkFooter from '@/components/landing/WordmarkFooter';
 
 export default function LandingPage() {
   return (
-    <main className="relative min-h-screen bg-black text-white antialiased">
+    <main className="relative min-h-screen bg-black text-white antialiased selection:bg-blue-500/30">
       <LandingNav />
       <Hero />
-
-      {/* Reuse the existing Polymarket ticker — it doubles as social proof
-          ("look, we're plugged into real prediction markets") and pulls the
-          eye downward into the substantive content. */}
-      <MarketPulse />
-
-      <StatsRow />
-      <PillarsSection />
-      <HowItWorksSection />
+      <Reason />
+      <Mechanism />
+      <Guarantee />
       <CTASection />
-      <Footer />
+      <WordmarkFooter />
     </main>
   );
 }

@@ -4,39 +4,34 @@ import { motion } from 'framer-motion';
 import EnterTerminalButton from './EnterTerminalButton';
 
 /**
- * Final-fold CTA. The hero already has a button; this one's job is to catch
- * users who scrolled the whole page evaluating the product. We restate the
- * single most concrete value prop, then drop the same button.
+ * Final close.
+ *
+ * The "Real wealth deserves real markets" line has been promoted to a
+ * mid-page beat (see Reason.tsx), so the closing CTA gets a quieter,
+ * action-oriented framing instead. One short instruction, one button.
  */
 export default function CTASection() {
   return (
-    <section className="relative py-28 md:py-36 overflow-hidden">
-      {/* Spotlight backdrop — strong enough to break the rhythm of the
-          preceding alternating sections. */}
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(34,197,94,0.10),transparent_60%),radial-gradient(ellipse_at_top,rgba(59,130,246,0.10),transparent_60%)] pointer-events-none"
-      />
-      <div className="relative max-w-4xl mx-auto px-6 text-center">
+    <section className="relative py-32 md:py-48 border-t border-zinc-900/60">
+      <div className="max-w-7xl mx-auto px-6">
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          viewport={{ once: true, margin: '-15%' }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
         >
-          <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6 leading-[1.05]">
-            Liquidity for the things that{' '}
-            <span className="bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
-              never had any.
-            </span>
+          <p className="eyebrow mb-12">Begin</p>
+
+          <h2 className="text-[clamp(3rem,8vw,7rem)] font-semibold tracking-[-0.045em] leading-[0.95] text-white max-w-5xl mb-12">
+            Open the terminal.
           </h2>
-          <p className="text-zinc-400 text-lg max-w-2xl mx-auto mb-10">
-            Connect your wallet, mint a testnet USDC balance, and start trading
-            fractional ownership of real-world wealth in under sixty seconds.
+
+          <p className="text-zinc-400 text-lg md:text-xl max-w-xl mb-12 leading-[1.55]">
+            Mint a testnet USDC balance. Trade your first fractional share.
+            Sixty seconds — and you&apos;re in.
           </p>
-          <div className="flex justify-center">
-            <EnterTerminalButton className="text-base px-8 py-4" />
-          </div>
+
+          <EnterTerminalButton size="lg" />
         </motion.div>
       </div>
     </section>

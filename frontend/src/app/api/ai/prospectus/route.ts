@@ -70,21 +70,21 @@ export async function POST(req: NextRequest) {
       name: asset.name,
       symbol: asset.symbol,
       prospectus: description,
-      prospectusModel: "gemini-1.5-flash",
+      prospectusModel: "gemini-3.5-flash",
       prospectusAt: new Date(),
     },
     update: {
       name: asset.name,
       symbol: asset.symbol,
       prospectus: description,
-      prospectusModel: "gemini-1.5-flash",
+      prospectusModel: "gemini-3.5-flash",
       prospectusAt: new Date(),
     },
   });
 
   return NextResponse.json({
     prospectus: description,
-    model: "gemini-1.5-flash",
+    model: "gemini-3.5-flash",
     generatedAt: new Date(),
     cached: false,
   });

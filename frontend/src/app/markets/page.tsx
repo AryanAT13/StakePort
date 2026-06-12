@@ -1,29 +1,63 @@
 'use client';
 
-// This is the previous `/` page — the live markets dashboard. The root URL
-// now serves the public landing, and signed-in users are routed here after
-// they click "Enter Terminal". Phase 3 will replace the inline mint widget
-// and portfolio sidebar with their proper redesigned versions; for now we
-// keep the existing surface so the user-flow stays unbroken between phases.
+// Markets dashboard.
+//
+// Phase 4 additions:
+//   - Filter bar (category tabs, search, sort) over the grid.
+//   - DB-cached enriched metadata (category, fair value) joined to the
+//     on-chain asset list via the new /api/markets endpoint.
+//   - Batch reads (useReadContracts) for names + valuations so search and
+//     valuation-sort don't need every card to call back into the parent.
+//   - Empty / no-match / loading states.
+//
+// Auth gate is session-driven (Phase 3 bug fix): if the SIWE cookie says
+// you're signed in and onboarded, we render — independent of wagmi's
+// reconnect race after a hard refresh.
 
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAccount, useReadContract, useReadContracts } from 'wagmi';
+import { formatEther } from 'viem';
+import { Plus } from 'lucide-react';
 import Navbar from '@/components/Navbar';
-import { useAccount, useReadContract, useWriteContract } from 'wagmi';
-import { MOCK_USDC_ADDRESS, ERC20_ABI, ASSET_FACTORY_ADDRESS, ASSET_FACTORY_ABI } from '@/constants/contracts';
-import { parseEther, formatEther } from 'viem';
-import { useState, useEffect } from 'react';
 import AssetCard from '@/components/AssetCard';
 import MarketPulse from '@/components/MarketPulse';
 import PortfolioValue from '@/components/PortfolioValue';
 import RecentActivity from '@/components/RecentActivity';
+import AddFundsModal from '@/components/AddFundsModal';
+import MarketFilters, { CategoryKey, SortKey } from '@/components/MarketFilters';
+import { useSession } from '@/hooks/useSession';
+import {
+  MOCK_USDC_ADDRESS,
+  ERC20_ABI,
+  ASSET_FACTORY_ADDRESS,
+  ASSET_FACTORY_ABI,
+  REAL_WORLD_ASSET_ABI,
+} from '@/constants/contracts';
+
+type MarketMeta = {
+  contractAddress: string;
+  name: string;
+  symbol?: string | null;
+  fairValue?: number | null;
+  fairValueCategory?: string | null;
+};
 
 export default function MarketsPage() {
   const { address } = useAccount();
-  const [balance, setBalance] = useState<string>("0");
-  const [mintAmount, setMintAmount] = useState<string>("");
+  const { user, loading: sessionLoading } = useSession();
+  const router = useRouter();
+  const [addFundsOpen, setAddFundsOpen] = useState(false);
 
-  const { writeContract, isPending, error: writeError } = useWriteContract();
+  // ---- Auth gate (session-driven, see Phase 3 bug fix) ------------------
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!user) { router.replace('/'); return; }
+    if (!user.onboarded) router.replace('/onboarding');
+  }, [sessionLoading, user, router]);
 
-  const { data: balanceData, refetch } = useReadContract({
+  // ---- KPI data ---------------------------------------------------------
+  const { data: balanceData, refetch: refetchBalance } = useReadContract({
     address: MOCK_USDC_ADDRESS,
     abi: ERC20_ABI,
     functionName: 'balanceOf',
@@ -37,86 +71,201 @@ export default function MarketsPage() {
     functionName: 'getDeployedAssets',
   });
 
+  const balance = balanceData ? parseFloat(formatEther(balanceData as bigint)) : 0;
+  const assets = useMemo(() => (assetList as `0x${string}`[] | undefined) ?? [], [assetList]);
+
+  // ---- Batch reads for filter/sort --------------------------------------
+  // Pulled into the parent so we can sort by name / valuation without
+  // round-tripping through each AssetCard. wagmi shares the cache key with
+  // the cards, so this isn't an extra network call — same multicall.
+  const { data: nameResults } = useReadContracts({
+    contracts: assets.map((addr) => ({
+      address: addr,
+      abi: REAL_WORLD_ASSET_ABI,
+      functionName: 'assetName' as const,
+    })),
+    query: { enabled: assets.length > 0 },
+  });
+  const { data: valuationResults } = useReadContracts({
+    contracts: assets.map((addr) => ({
+      address: addr,
+      abi: REAL_WORLD_ASSET_ABI,
+      functionName: 'valuation' as const,
+    })),
+    query: { enabled: assets.length > 0 },
+  });
+
+  // ---- Enriched metadata from the DB ------------------------------------
+  const [metaByAddress, setMetaByAddress] = useState<Record<string, MarketMeta>>({});
   useEffect(() => {
-    if (balanceData) setBalance(formatEther(balanceData as bigint));
-  }, [balanceData]);
+    let cancelled = false;
+    fetch('/api/markets')
+      .then((r) => r.json())
+      .then((j: { items: MarketMeta[] }) => {
+        if (cancelled) return;
+        const map: Record<string, MarketMeta> = {};
+        for (const m of j.items) map[m.contractAddress.toLowerCase()] = m;
+        setMetaByAddress(map);
+      })
+      .catch(() => {/* DB miss is non-fatal; cards render with on-chain only */});
+    return () => { cancelled = true; };
+  }, []);
 
-  useEffect(() => {
-    if (writeError) {
-      console.error("Transaction Error:", writeError);
-      alert("Transaction Failed: " + writeError.message);
-    }
-  }, [writeError]);
+  // ---- Filter state -----------------------------------------------------
+  const [category, setCategory] = useState<CategoryKey>('all');
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<SortKey>('recent');
 
-  const handleAddFunds = () => {
-    if (!address) return alert("Please connect your wallet first!");
-    if (!mintAmount || parseFloat(mintAmount) <= 0) return alert("Please enter a valid amount");
-
-    writeContract({
-      address: MOCK_USDC_ADDRESS,
-      abi: ERC20_ABI,
-      functionName: 'mint',
-      args: [address, parseEther(mintAmount)],
-    }, {
-      onSuccess: () => {
-        setMintAmount("");
-        // Faucet TX needs a block to confirm — slight delay before refetch
-        // beats showing a stale 0 balance.
-        setTimeout(() => refetch(), 4000);
-      },
+  // ---- Compose, filter, sort -------------------------------------------
+  const enriched = useMemo(() => {
+    return assets.map((addr, i) => {
+      const name = (nameResults?.[i]?.result as string | undefined) ?? '';
+      const valuation = (valuationResults?.[i]?.result as bigint | undefined) ?? 0n;
+      const meta = metaByAddress[addr.toLowerCase()];
+      return { addr, name, valuation, meta };
     });
-  };
+  }, [assets, nameResults, valuationResults, metaByAddress]);
+
+  const visible = useMemo(() => {
+    let arr = enriched;
+    if (category !== 'all') {
+      arr = arr.filter((a) => a.meta?.fairValueCategory === category);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      arr = arr.filter((a) => a.name.toLowerCase().includes(q));
+    }
+    // We mutate a shallow copy below, never the memoized source.
+    const sorted = [...arr];
+    if (sort === 'name-asc') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sort === 'valuation-desc') {
+      sorted.sort((a, b) => (b.valuation > a.valuation ? 1 : b.valuation < a.valuation ? -1 : 0));
+    } else {
+      // "recent" — factory pushes new assets to the end, so reverse.
+      sorted.reverse();
+    }
+    return sorted;
+  }, [enriched, category, search, sort]);
+
+  // ---- Render gate ------------------------------------------------------
+  if (sessionLoading || !user || !user.onboarded) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <p className="text-xs text-zinc-500 uppercase tracking-[0.22em]">Authenticating…</p>
+      </main>
+    );
+  }
+
+  const showSkeleton = !assetList;
+  const noResults = !showSkeleton && assets.length > 0 && visible.length === 0;
+  const noAssetsAtAll = !showSkeleton && assets.length === 0;
 
   return (
     <main className="min-h-screen bg-black text-white">
       <Navbar />
       <MarketPulse />
 
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="flex justify-between items-end mb-8">
+      <div className="max-w-7xl mx-auto px-6 py-10 md:py-12">
+        {/* Greeting + page CTA */}
+        <div className="flex items-end justify-between mb-10 flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white">Markets</h1>
-            <p className="text-zinc-400 text-sm mt-1">Trade fractional ownership of high-value assets.</p>
+            <p className="eyebrow mb-2">
+              Welcome back{user.displayName ? `, ${user.displayName}` : ''}
+            </p>
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-[-0.02em]">Markets</h1>
+          </div>
+          <button
+            onClick={() => setAddFundsOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-zinc-800 hover:border-zinc-600 text-sm transition"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Funds
+          </button>
+        </div>
+
+        {/* KPIs */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-5">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2.5">
+              Portfolio Value
+            </p>
+            <PortfolioValue assetList={assets} />
+          </div>
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-5">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2.5">
+              Cash Balance
+            </p>
+            <p className="text-3xl font-mono font-semibold tracking-tight">
+              ${balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-5">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-2.5">
+              Live Markets
+            </p>
+            <p className="text-3xl font-semibold tracking-tight">{assets.length}</p>
           </div>
         </div>
 
+        {/* Grid + activity sidebar */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
+            <MarketFilters
+              category={category}
+              onCategoryChange={setCategory}
+              search={search}
+              onSearchChange={setSearch}
+              sort={sort}
+              onSortChange={setSort}
+              totalCount={assets.length}
+              filteredCount={visible.length}
+            />
+
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {!assetList && <div className="text-zinc-500 text-sm">Loading markets...</div>}
-              {assetList && (assetList as `0x${string}`[]).map((addr) => (
-                <AssetCard key={addr} assetAddress={addr} />
+              {showSkeleton &&
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="bg-zinc-950 border border-zinc-900 rounded-xl overflow-hidden animate-pulse">
+                    <div className="aspect-square bg-zinc-900" />
+                    <div className="p-4 space-y-2.5">
+                      <div className="h-3 bg-zinc-900 rounded w-3/4" />
+                      <div className="h-3 bg-zinc-900 rounded w-1/2" />
+                      <div className="h-3 bg-zinc-900 rounded w-1/3 mt-3" />
+                    </div>
+                  </div>
+                ))}
+
+              {noAssetsAtAll && (
+                <div className="col-span-full text-center py-16 border border-dashed border-zinc-900 rounded-xl">
+                  <p className="text-zinc-400 mb-2">No assets listed yet.</p>
+                  <p className="text-xs text-zinc-600">Be the first — list one from the top right.</p>
+                </div>
+              )}
+
+              {noResults && (
+                <div className="col-span-full text-center py-16 border border-dashed border-zinc-900 rounded-xl">
+                  <p className="text-zinc-400 mb-1">Nothing matches.</p>
+                  <p className="text-xs text-zinc-600">Try clearing your filters or search.</p>
+                </div>
+              )}
+
+              {visible.map((a) => (
+                <AssetCard key={a.addr} assetAddress={a.addr} meta={a.meta} />
               ))}
             </div>
           </div>
 
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
-              <p className="text-xs text-zinc-500 uppercase font-bold mb-2">Your Portfolio</p>
-              <PortfolioValue assetList={assetList as `0x${string}`[] || []} />
-              <div className="mt-4 pt-4 border-t border-zinc-800">
-                <p className="text-xs text-zinc-500 mb-1">Cash Balance</p>
-                <p className="text-xl font-mono">${parseFloat(balance).toLocaleString()}</p>
-              </div>
-              <div className="mt-4 flex gap-2">
-                <input
-                  type="number"
-                  placeholder="5000"
-                  className="w-full bg-black border border-zinc-700 rounded px-2 py-1 text-sm"
-                  value={mintAmount}
-                  onChange={e => setMintAmount(e.target.value)}
-                />
-                <button
-                  onClick={handleAddFunds}
-                  disabled={isPending}
-                  className="bg-zinc-700 hover:bg-zinc-600 px-3 py-1 rounded text-xs font-bold disabled:opacity-50"
-                >+</button>
-              </div>
-            </div>
+          <div className="lg:col-span-1">
             <RecentActivity />
           </div>
         </div>
       </div>
+
+      <AddFundsModal
+        open={addFundsOpen}
+        onClose={() => setAddFundsOpen(false)}
+        onMinted={() => setTimeout(() => refetchBalance(), 1500)}
+      />
     </main>
   );
 }

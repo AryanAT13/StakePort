@@ -3,82 +3,72 @@
 import { useAccount } from 'wagmi';
 import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { ArrowRight, Loader2 } from 'lucide-react';
-import { useSession } from '@/hooks/useSession';
-import { useSiweSignIn } from '@/hooks/useSiweSignIn';
+import { useEffect, useRef } from 'react';
+import { ArrowRight } from 'lucide-react';
 
 /**
- * The CTA that does it all.
+ * The one button that enters the app.
  *
- *   not connected   -> open RainbowKit modal
- *   connected,  no session -> trigger SIWE sign, then route to /markets
- *   connected + session    -> route to /markets directly
+ * Flow:
+ *   not connected -> open the wallet modal, mark "user intends to enter"
+ *   wallet finishes connecting -> auto-route to /markets (one click total)
+ *   already connected -> route straight to /markets
  *
- * Errors at any step bubble up into a local error state instead of throwing,
- * because the wallet "user rejected" path is common and shouldn't crash the
- * landing.
+ * We deliberately do NOT prompt SIWE here. SIWE is a write-authorization
+ * primitive — it belongs at the moment the user creates a profile or
+ * touches /create. Asking for a signature just to browse markets is the
+ * exact friction the redesign brief called out. The session, when it
+ * exists, is set later by /onboarding (Phase 3).
  */
 type Props = {
   className?: string;
   label?: string;
-  variant?: 'primary' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
 };
+
+const SIZES = {
+  sm: 'text-xs px-4 py-2',
+  md: 'text-sm px-6 py-3',
+  lg: 'text-base px-7 py-3.5',
+} as const;
 
 export default function EnterTerminalButton({
   className = '',
-  label = 'Enter Terminal',
-  variant = 'primary',
+  label = 'Open Terminal',
+  size = 'md',
 }: Props) {
   const { isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
-  const { user, loading, refetch } = useSession();
-  const { signIn, signing } = useSiweSignIn();
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
 
-  async function handleClick() {
-    setError(null);
-    try {
-      if (!isConnected) {
-        // Connect first; the user can click again once their wallet is wired.
-        openConnectModal?.();
-        return;
-      }
-      if (!user) {
-        await signIn();
-        await refetch();
-      }
-      // Phase 3 will redirect first-timers to /onboarding here. For now the
-      // markets view is the landing target either way.
+  // Only auto-redirect if the user clicked our button *during this mount*.
+  // Auto-reconnecting wallets shouldn't hijack the landing scroll from a
+  // visitor who arrived deliberately.
+  const pendingEntry = useRef(false);
+
+  useEffect(() => {
+    if (pendingEntry.current && isConnected) {
+      pendingEntry.current = false;
       router.push('/markets');
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Could not enter terminal';
-      // Wallet "user rejected request" is the common one — suppress unless
-      // it's something else worth showing.
-      if (!/rejected|denied/i.test(msg)) setError(msg);
     }
+  }, [isConnected, router]);
+
+  function handleClick() {
+    if (!isConnected) {
+      pendingEntry.current = true;
+      openConnectModal?.();
+      return;
+    }
+    router.push('/markets');
   }
 
-  const busy = loading || signing;
-
-  const base =
-    variant === 'primary'
-      ? 'gradient-border bg-black hover:bg-zinc-950 text-white'
-      : 'border border-zinc-800 hover:border-zinc-600 bg-zinc-950/40 text-zinc-200';
-
   return (
-    <div className="inline-flex flex-col items-start gap-2">
-      <button
-        onClick={handleClick}
-        disabled={busy}
-        className={`group inline-flex items-center gap-2 rounded-lg px-6 py-3 font-semibold text-sm transition disabled:opacity-60 disabled:cursor-not-allowed ${base} ${className}`}
-      >
-        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-        <span>{signing ? 'Sign in your wallet…' : label}</span>
-        {!busy && <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />}
-      </button>
-      {error ? <span className="text-xs text-red-400">{error}</span> : null}
-    </div>
+    <button
+      onClick={handleClick}
+      className={`group inline-flex items-center gap-2 rounded-full bg-white text-black font-medium transition hover:bg-zinc-100 hover:shadow-[0_14px_40px_-10px_rgba(255,255,255,0.45)] shadow-[0_6px_24px_-10px_rgba(255,255,255,0.25)] ${SIZES[size]} ${className}`}
+    >
+      <span>{label}</span>
+      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.25} />
+    </button>
   );
 }
