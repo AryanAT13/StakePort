@@ -61,6 +61,25 @@ export default function CreateAssetWizard() {
   const [generating, setGenerating] = useState({ prospectus: false, fairValue: false });
   const [error, setError] = useState<string | null>(null);
 
+  // Re-entrancy guard for the launch button.
+  //
+  // The "two duplicate listings on a single click" bug: the launch button's
+  // `disabled` only reads `isPending`, which doesn't flip until AFTER
+  // handleMint reaches its `writeContract(...)` call. handleMint awaits a
+  // metadata IPFS upload first (~1-2s), and during that window a second
+  // click ran a second handleMint — two metadata pins, two writeContracts,
+  // two deployed contracts pointing at the same IPFS URI. The first
+  // asset-detail view of each then cached two DIFFERENT Gemini prospectuses
+  // server-side (one per contract address), which is the AI Discrepancy
+  // symptom.
+  //
+  // We guard with a ref instead of state because state updates are async —
+  // a ref flips synchronously in the same tick. The ref + the new
+  // `mintingNow` state together drive a fully-disabled button from the
+  // first millisecond of the click.
+  const mintingRef = useRef(false);
+  const [mintingNow, setMintingNow] = useState(false);
+
   // ---- Step 1 validation -----------------------------------------------
   const step1Valid = useMemo(
     () => form.name.trim().length >= 2 && form.symbol.trim().length >= 1 && parseFloat(form.valuation) > 0 && form.description.trim().length >= 20,
@@ -128,8 +147,18 @@ export default function CreateAssetWizard() {
   }
 
   // ---- Mint (Step 4) ---------------------------------------------------
-  const { writeContract, data: txHash, isPending: writePending, reset: resetWrite } = useWriteContract();
+  const { writeContract, data: txHash, isPending: writePending, reset: resetWrite, error: writeError } = useWriteContract();
   const { data: receipt, isLoading: txConfirming, isSuccess: txSuccess } = useWaitForTransactionReceipt({ hash: txHash });
+
+  // Release the re-entrancy guard if the wallet rejects the signature so
+  // the user can press "Launch" again. (Receipt-success path doesn't need
+  // a release — the next effect routes away from the page.)
+  useEffect(() => {
+    if (writeError) {
+      mintingRef.current = false;
+      setMintingNow(false);
+    }
+  }, [writeError]);
 
   // When the receipt lands, decode the AssetCreated event to find the new
   // contract address, then route to its detail page. This is what makes
@@ -161,6 +190,10 @@ export default function CreateAssetWizard() {
   }, [receipt, txSuccess, router]);
 
   async function handleMint() {
+    // Re-entrancy guard — see the comment on mintingRef above.
+    if (mintingRef.current) return;
+    mintingRef.current = true;
+    setMintingNow(true);
     setError(null);
     try {
       // 1. Upload the metadata JSON (the on-chain `assetUrl` points to this).
@@ -184,12 +217,19 @@ export default function CreateAssetWizard() {
         functionName: 'createAsset',
         args: [form.name, form.symbol.toUpperCase(), metadataUri, parseEther(form.valuation)],
       });
+      // NOTE: we don't release the guard here. The button stays disabled
+      // until the receipt arrives + we route away. If the wallet rejects
+      // the signature, useWriteContract surfaces an error via writeError,
+      // and the catch block below releases the guard so the user can retry.
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Mint failed';
       setError(msg);
       resetWrite();
+      mintingRef.current = false;
+      setMintingNow(false);
     }
   }
+
 
   // ---- Navigation -------------------------------------------------------
   async function handleNext() {
@@ -260,7 +300,7 @@ export default function CreateAssetWizard() {
           <Step4
             form={form}
             onMint={handleMint}
-            isPending={writePending}
+            isPending={writePending || mintingNow}
             isConfirming={txConfirming}
           />
         )}
