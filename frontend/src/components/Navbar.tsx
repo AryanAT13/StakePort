@@ -21,6 +21,7 @@ import { LogoLockup } from '@/components/brand/Logo';
 const NAV_LINKS: { href: string; label: string; match?: (p: string) => boolean }[] = [
   { href: '/markets', label: 'Markets', match: (p) => p === '/markets' || p.startsWith('/asset/') },
   { href: '/portfolio', label: 'Portfolio' },
+  { href: '/settings', label: 'Settings' },
 ];
 
 export default function Navbar() {
