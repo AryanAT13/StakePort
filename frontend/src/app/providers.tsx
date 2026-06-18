@@ -5,6 +5,7 @@ import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rai
 import { arbitrum, base, mainnet, optimism, polygon, sepolia, hardhat } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider } from 'wagmi';
+import { Toaster } from 'sonner';
 import { publicEnv } from '@/lib/env';
 
 /**
@@ -56,6 +57,21 @@ export function Providers({ children }: { children: React.ReactNode }) {
           })}
         >
           {children}
+          {/* Global toast surface. Styled to match the dashboard's dark
+              chrome — zinc panel, no chrome animations. */}
+          <Toaster
+            theme="dark"
+            position="bottom-right"
+            richColors
+            closeButton
+            toastOptions={{
+              style: {
+                background: '#09090b',
+                border: '1px solid #27272a',
+                color: '#e4e4e7',
+              },
+            }}
+          />
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

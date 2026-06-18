@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
 import { parseEther } from 'viem';
 import { X, Loader2, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { MOCK_USDC_ADDRESS, ERC20_ABI } from '@/constants/contracts';
 
 /**
@@ -69,10 +70,14 @@ export default function AddFundsModal({ open, onClose, onMinted }: Props) {
       {
         onSuccess: () => {
           setConfirmed(true);
-          // Refetch from the parent after the testnet block lands (~3s).
+          toast.success(`+$${parseFloat(amount).toLocaleString()} USDC minted to your wallet.`);
           setTimeout(() => onMinted?.(), 3500);
-          // Auto-close shortly after — keeps the modal feeling decisive.
           setTimeout(() => onClose(), 1600);
+        },
+        onError: (err) => {
+          // Wallet rejection isn't an error — let it pass silently.
+          const msg = err.message.split('\n')[0];
+          if (!/rejected|denied/i.test(msg)) toast.error(msg.slice(0, 160));
         },
       }
     );
