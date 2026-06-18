@@ -78,20 +78,36 @@ export default function MarketsPage() {
   // Pulled into the parent so we can sort by name / valuation without
   // round-tripping through each AssetCard. wagmi shares the cache key with
   // the cards, so this isn't an extra network call — same multicall.
-  const { data: nameResults } = useReadContracts({
-    contracts: assets.map((addr) => ({
+  //
+  // CRITICAL: the contracts arrays MUST be memoised on `[assets]`. wagmi
+  // uses the contracts reference as part of its React Query key; passing
+  // `assets.map(...)` inline rebuilds the array every render → wagmi
+  // observes a "new" query → resubscribes → triggers re-render to expose
+  // the fresh loading state → new array again → infinite render loop
+  // (and the saturated RPC traffic that comes with it).
+  const nameContracts = useMemo(
+    () => assets.map((addr) => ({
       address: addr,
       abi: REAL_WORLD_ASSET_ABI,
       functionName: 'assetName' as const,
     })),
-    query: { enabled: assets.length > 0 },
-  });
-  const { data: valuationResults } = useReadContracts({
-    contracts: assets.map((addr) => ({
+    [assets]
+  );
+  const valuationContracts = useMemo(
+    () => assets.map((addr) => ({
       address: addr,
       abi: REAL_WORLD_ASSET_ABI,
       functionName: 'valuation' as const,
     })),
+    [assets]
+  );
+
+  const { data: nameResults } = useReadContracts({
+    contracts: nameContracts,
+    query: { enabled: assets.length > 0 },
+  });
+  const { data: valuationResults } = useReadContracts({
+    contracts: valuationContracts,
     query: { enabled: assets.length > 0 },
   });
 
