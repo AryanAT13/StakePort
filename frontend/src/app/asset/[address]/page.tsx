@@ -29,8 +29,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { formatEther, parseEther, parseAbiItem } from 'viem';
+import { decodeEventLog, formatEther, parseEther, parseAbiItem } from 'viem';
 import { Activity, AlertTriangle, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import PriceChart from '@/components/PriceChart';
@@ -168,7 +169,7 @@ export default function AssetDetailsPage() {
 
   // ---- Writes -----------------------------------------------------------
   const { writeContract, isPending, data: hash, error: writeError } = useWriteContract();
-  const { isSuccess: txSuccess, isError: txError } = useWaitForTransactionReceipt({ hash });
+  const { data: receipt, isSuccess: txSuccess, isError: txError } = useWaitForTransactionReceipt({ hash });
 
   useEffect(() => {
     if (txSuccess) {
@@ -179,6 +180,96 @@ export default function AssetDetailsPage() {
       refetchUsdcBal();
     }
   }, [txSuccess, refetchActive, refetchAllowance, refetchSold, refetchAssetBal, refetchUsdcBal]);
+
+  // ---- Trade indexing + tx toasts ---------------------------------------
+  // On a successful receipt we (a) toast the user with what happened and
+  // (b) if it was a Traded event, persist it to the Trade table so the
+  // portfolio can compute average buy price + unrealised P&L. The notify
+  // ref dedupes so StrictMode-double-effects don't toast twice or insert
+  // twice (the API is idempotent on txHash anyway, but the toast isn't).
+  const notifiedHash = useRef<string | null>(null);
+  useEffect(() => {
+    if (!txSuccess || !receipt || !hash) return;
+    if (notifiedHash.current === hash) return;
+    notifiedHash.current = hash;
+
+    let recordedTrade = false;
+    for (const log of receipt.logs) {
+      try {
+        const decoded = decodeEventLog({
+          abi: REAL_WORLD_ASSET_ABI,
+          data: log.data,
+          topics: log.topics,
+        });
+        if (decoded.eventName === 'Traded') {
+          const args = decoded.args as unknown as {
+            action: string; amountIn: bigint; amountOut: bigint; newPrice: bigint;
+          };
+          const isBuy = args.action === 'BUY';
+          const tokenAmount = formatEther(isBuy ? args.amountOut : args.amountIn);
+          const usdcAmount = formatEther(isBuy ? args.amountIn : args.amountOut);
+          const tokenPretty = parseFloat(tokenAmount).toFixed(2);
+
+          toast.success(
+            `${isBuy ? 'Bought' : 'Sold'} ${tokenPretty} ${(symbol as string) ?? ''}`.trim()
+          );
+
+          // Fire-and-forget indexing. We don't await because the user
+          // doesn't need to wait on our DB write to see their balance
+          // update. If they're not signed in, the endpoint 401s silently.
+          fetch('/api/trades', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contractAddress: assetAddress,
+              txHash: hash,
+              action: args.action,
+              tokenAmount,
+              usdcAmount,
+              priceAfter: formatEther(args.newPrice),
+              blockNumber: Number(receipt.blockNumber),
+              timestamp: new Date().toISOString(),
+            }),
+          }).catch(() => {/* indexing failure is non-fatal */});
+          recordedTrade = true;
+          break;
+        }
+        if (decoded.eventName === 'BuyoutProposed') {
+          toast.success('Buyout executed — asset acquired.');
+          recordedTrade = true;
+          break;
+        }
+        if (decoded.eventName === 'CashedOut') {
+          toast.success('Share claimed.');
+          recordedTrade = true;
+          break;
+        }
+        if (decoded.eventName === 'LiquidityAdded') {
+          toast.success('Market initialised — trading is live.');
+          recordedTrade = true;
+          break;
+        }
+      } catch {/* not a recognised event in this ABI, keep scanning */}
+    }
+    if (!recordedTrade) {
+      // Approval, or some other event our ABI doesn't decode. Generic toast.
+      toast.success('Transaction confirmed.');
+    }
+  }, [txSuccess, receipt, hash, assetAddress, symbol]);
+
+  // Write-error toasts. Wallet rejection is suppressed because it's a
+  // user-initiated cancel, not an error worth flagging.
+  useEffect(() => {
+    if (!writeError) return;
+    const msg = writeError.message.split('\n')[0];
+    if (!/rejected|denied|user rejected|user denied/i.test(msg)) {
+      toast.error(msg.slice(0, 160));
+    }
+  }, [writeError]);
+  useEffect(() => {
+    if (txError) toast.error('Transaction failed.');
+  }, [txError]);
 
   // ---- Derived values ---------------------------------------------------
   const isCreator = !!userAddress && !!ownerAddress && userAddress.toLowerCase() === (ownerAddress as string).toLowerCase();
@@ -240,16 +331,9 @@ export default function AssetDetailsPage() {
           />
 
           <AIProspectusCard prospectus={prospectus} loading={prospectusLoading} />
-
-          <MLFairValueGauge
-            fair={fairValue}
-            marketCap={marketCap}
-            category={fairValueCategory}
-            loading={fairValueLoading}
-          />
         </div>
 
-        {/* RIGHT 4/12 — context-aware action stack */}
+        {/* RIGHT 4/12 — action stack + ML Oracle (above-the-fold trading intel) */}
         <div className="col-span-12 lg:col-span-4 space-y-4">
           {isSold && (
             <CashOutPanel
@@ -302,22 +386,19 @@ export default function AssetDetailsPage() {
             </div>
           )}
 
-          {/* Tx feedback */}
-          {writeError && (
-            <div className="px-4 py-3 rounded-lg bg-red-500/5 border border-red-500/20 text-xs text-red-400">
-              {writeError.message.split('\n')[0]}
-            </div>
-          )}
-          {txSuccess && (
-            <div className="px-4 py-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-xs text-emerald-400">
-              Transaction confirmed.
-            </div>
-          )}
-          {txError && (
-            <div className="px-4 py-3 rounded-lg bg-red-500/5 border border-red-500/20 text-xs text-red-400">
-              Transaction failed. Check console.
-            </div>
-          )}
+          {/* Tx feedback now lives in toasts (top-level Toaster) — no need
+              to occupy real estate in the action column. See the trade-
+              indexing useEffect above. */}
+
+          {/* ML Oracle — promoted into the action column so traders see it
+              before scrolling. The component below is the narrow-column
+              variant: stacked header, 2-stat footer, tighter copy. */}
+          <MLFairValueGauge
+            fair={fairValue}
+            marketCap={marketCap}
+            category={fairValueCategory}
+            loading={fairValueLoading}
+          />
         </div>
       </div>
     </main>
@@ -595,64 +676,59 @@ function MLFairValueGauge({
   const above = (spread ?? 0) > 0;
 
   return (
-    <div className="bg-zinc-950/70 border border-zinc-900 rounded-2xl p-6 md:p-8">
-      <div className="flex items-end justify-between mb-8">
-        <div>
-          <p className="eyebrow flex items-center gap-2">
-            <Activity className="w-3 h-3" /> ML Fair Value Oracle
-          </p>
-          <p className="text-xs text-zinc-600 mt-1.5 font-mono">
-            Isolation Forest · live comps
-          </p>
-        </div>
-        <div className="text-right">
-          {loading ? (
-            <div className="h-8 w-32 bg-zinc-900 animate-pulse rounded" />
-          ) : fair ? (
-            <>
-              <p className="text-2xl md:text-3xl font-mono font-semibold tabular-nums">
-                {formatCompactUsd(fair)}
-              </p>
-              <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mt-1">Anchor</p>
-            </>
-          ) : (
-            <p className="text-xs text-zinc-600">Oracle offline</p>
-          )}
-        </div>
+    <div className="bg-zinc-950/70 border border-zinc-900 rounded-2xl p-5">
+      {/* Header — stacked for narrow column */}
+      <div className="mb-5">
+        <p className="eyebrow flex items-center gap-2">
+          <Activity className="w-3 h-3" /> ML Fair Value
+        </p>
+        <p className="text-[10px] text-zinc-600 mt-1 font-mono">
+          Isolation Forest oracle
+        </p>
+      </div>
+
+      {/* Anchor headline */}
+      <div className="mb-6">
+        {loading ? (
+          <div className="h-8 w-32 bg-zinc-900 animate-pulse rounded" />
+        ) : fair ? (
+          <>
+            <p className="text-2xl font-mono font-semibold tabular-nums leading-none">
+              {formatCompactUsd(fair)}
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mt-1.5">
+              Anchor · real-world comps
+            </p>
+          </>
+        ) : (
+          <p className="text-xs text-zinc-600">Oracle offline</p>
+        )}
       </div>
 
       {/* Gauge ruler */}
-      <div className="relative h-2 bg-zinc-900 rounded-full mb-3 overflow-visible">
-        {/* Background gradient: emerald (under) ↔ red (over) */}
+      <div className="relative h-2 bg-zinc-900 rounded-full mb-2.5 overflow-visible">
         <div className="absolute inset-0 rounded-full bg-gradient-to-r from-emerald-500/30 via-zinc-700/0 to-red-500/30" />
-        {/* Centre marker at fair value */}
         <div className="absolute top-[-3px] left-1/2 -translate-x-1/2 w-px h-[14px] bg-zinc-700" />
-        {/* Current AMM position */}
         {spread !== null && (
           <div
-            className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white shadow-[0_0_14px_rgba(255,255,255,0.45)] ring-2 ring-black transition-all duration-700"
-            style={{ left: `calc(${position}% - 8px)` }}
+            className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.45)] ring-2 ring-black transition-all duration-700"
+            style={{ left: `calc(${position}% - 7px)` }}
           />
         )}
       </div>
-      <div className="flex justify-between text-[10px] uppercase tracking-[0.18em] mb-7">
+      <div className="flex justify-between text-[9px] uppercase tracking-[0.16em] mb-5">
         <span className="text-emerald-400/70">Discount</span>
         <span className="text-zinc-400">Fair</span>
         <span className="text-red-400/70">Premium</span>
       </div>
 
-      {/* Numbers row */}
-      <div className="grid grid-cols-3 gap-4 pt-5 border-t border-zinc-900">
+      {/* Numbers row — 2-stat for narrow column. Anchor lives in the
+          headline above, so we don't repeat it. */}
+      <div className="grid grid-cols-2 gap-3 pt-4 border-t border-zinc-900">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1.5">Market Cap</p>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1.5">Market</p>
           <p className="text-sm font-mono font-semibold tabular-nums">
             {marketCap > 0 ? formatCompactUsd(marketCap) : '—'}
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-1.5">Anchor</p>
-          <p className="text-sm font-mono font-semibold tabular-nums">
-            {fair ? formatCompactUsd(fair) : '—'}
           </p>
         </div>
         <div>
@@ -663,20 +739,20 @@ function MLFairValueGauge({
         </div>
       </div>
 
-      {/* Warning banner — over/underpriced by a lot */}
+      {/* Warning — trimmed for narrow column */}
       {spread !== null && Math.abs(spread) > 30 && (
-        <div className="mt-5 flex items-start gap-2.5 text-xs">
-          <AlertTriangle className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${above ? 'text-red-400' : 'text-emerald-400'}`} />
-          <p className="text-zinc-400 leading-relaxed">
+        <div className="mt-4 flex items-start gap-2 text-[11px]">
+          <AlertTriangle className={`w-3 h-3 mt-0.5 flex-shrink-0 ${above ? 'text-red-400' : 'text-emerald-400'}`} />
+          <p className="text-zinc-400 leading-snug">
             {above
-              ? 'AMM trades meaningfully above oracle. A 25% premium hostile buyout becomes a profitable arbitrage if a whale flips physically.'
-              : 'AMM trades meaningfully below oracle. The hostile-buyout floor becomes attractive — a buyer could take the asset and exit at fair value.'}
+              ? 'AMM trades above oracle — buyout flip becomes profitable.'
+              : 'AMM trades below oracle — buyout floor exposes upside.'}
           </p>
         </div>
       )}
 
       {category && (
-        <p className="text-[10px] text-zinc-600 mt-4 font-mono">Category: {category}</p>
+        <p className="text-[10px] text-zinc-600 mt-3.5 font-mono">{category}</p>
       )}
     </div>
   );
