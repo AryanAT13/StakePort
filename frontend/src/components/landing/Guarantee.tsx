@@ -9,7 +9,7 @@ import { motion } from 'framer-motion';
  */
 export default function Guarantee() {
   return (
-    <section className="relative py-32 md:py-44 border-t border-zinc-900/60">
+    <section id="guarantee" className="relative py-32 md:py-44 border-t border-zinc-900/60">
       <div className="max-w-7xl mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 18 }}
