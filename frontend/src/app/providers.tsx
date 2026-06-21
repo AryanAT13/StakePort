@@ -1,45 +1,80 @@
 'use client';
 
 import * as React from 'react';
-import { RainbowKitProvider, getDefaultConfig, darkTheme } from '@rainbow-me/rainbowkit';
-import { arbitrum, base, mainnet, optimism, polygon, sepolia, hardhat } from 'wagmi/chains';
+import { RainbowKitProvider, connectorsForWallets, darkTheme } from '@rainbow-me/rainbowkit';
+import {
+  injectedWallet,
+  metaMaskWallet,
+  rabbyWallet,
+} from '@rainbow-me/rainbowkit/wallets';
+import { createConfig, WagmiProvider } from 'wagmi';
+import { hardhat, sepolia } from 'wagmi/chains';
+import { http } from 'viem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WagmiProvider } from 'wagmi';
 import { Toaster } from 'sonner';
 import { publicEnv } from '@/lib/env';
 
 /**
- * Web3 + data providers, in the exact order they need to nest:
- *   Wagmi (chain connection)
- *     -> ReactQuery (data fetching cache, used by wagmi + our /api hooks)
- *       -> RainbowKit (wallet UI)
+ * Web3 + data providers.
  *
- * We pick chains in priority order — the first one is what new sessions
- * default to, configured via NEXT_PUBLIC_CHAIN_ID.
+ * Phase 8.3 — stop initialising WalletConnect.
+ *
+ * The previous build used RainbowKit's `getDefaultConfig`, which always
+ * registers a WalletConnect connector under the hood. With our placeholder
+ * `projectId="stakeport-dev"` that triggers two failing requests on every
+ * page load:
+ *
+ *   GET https://api.web3modal.org/appkit/v1/config?projectId=stakeport-dev
+ *       → 403 Forbidden
+ *   POST https://pulse.walletconnect.org/e?projectId=stakeport-dev
+ *       → 400 Bad Request
+ *
+ * They don't crash the app, but they fire on every render and saturate
+ * the network panel. Switching to `createConfig` with hand-rolled
+ * connectors (MetaMask, Rabby, generic injected) skips WalletConnect
+ * entirely. Mobile wallets that require WC won't work, but for dev that
+ * trade-off is correct.
+ *
+ * We also stay on the two chains we can actually hit (hardhat + sepolia)
+ * so wagmi never spins up an ENS resolver against eth.merkle.io and
+ * triggers the CORS cascade that was kicking users back to `/`.
  */
 
-const allChains = [hardhat, sepolia, polygon, mainnet, base, arbitrum, optimism] as const;
-const preferred = allChains.find((c) => c.id === publicEnv.chainId) ?? hardhat;
-const restChains = allChains.filter((c) => c.id !== preferred.id);
+const CHAINS = [hardhat, sepolia] as const;
+const preferred = CHAINS.find((c) => c.id === publicEnv.chainId) ?? hardhat;
+const rest = CHAINS.filter((c) => c.id !== preferred.id);
 
-const wagmiConfig = getDefaultConfig({
-  appName: 'StakePort',
-  // WalletConnect requires a project id; we fall back to a dev sentinel that
-  // disables WC but leaves injected wallets (MetaMask, Rabby) fully working.
-  projectId: publicEnv.walletConnectProjectId,
-  chains: [preferred, ...restChains] as unknown as readonly [typeof preferred, ...typeof restChains],
+// Connectors — injected family only. No walletConnectWallet ⇒ no AppKit init.
+const connectors = connectorsForWallets(
+  [
+    {
+      groupName: 'Recommended',
+      wallets: [metaMaskWallet, rabbyWallet, injectedWallet],
+    },
+  ],
+  {
+    appName: 'StakePort',
+    projectId: publicEnv.walletConnectProjectId,
+  }
+);
+
+const wagmiConfig = createConfig({
+  chains: [preferred, ...rest] as unknown as readonly [typeof preferred, ...typeof rest],
+  connectors,
+  transports: {
+    [hardhat.id]: http(publicEnv.rpcUrl),
+    [sepolia.id]: http('https://rpc.sepolia.org'),
+  },
   ssr: true,
 });
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Asset prices update on every trade event, but on-chain reads are
-      // cheap enough that 10s of staleness keeps the UI snappy without
-      // hammering RPC. Trade-side mutations refetch on success anyway.
       staleTime: 10_000,
       gcTime: 5 * 60_000,
       refetchOnWindowFocus: false,
+      retry: 1,
     },
   },
 });
@@ -50,15 +85,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           theme={darkTheme({
-            accentColor: '#3b82f6', // matches the "StakePort" blue
+            accentColor: '#3b82f6',
             accentColorForeground: 'white',
             borderRadius: 'medium',
             overlayBlur: 'small',
           })}
         >
           {children}
-          {/* Global toast surface. Styled to match the dashboard's dark
-              chrome — zinc panel, no chrome animations. */}
           <Toaster
             theme="dark"
             position="bottom-right"

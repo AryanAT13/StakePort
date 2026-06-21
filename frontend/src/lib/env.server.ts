@@ -33,6 +33,10 @@ export const serverEnv = {
   })(),
   aiEngineUrl: optional(process.env.AI_ENGINE_URL, "http://127.0.0.1:8000"),
   pinataJwt: required("PINATA_JWT", process.env.PINATA_JWT),
+  // Used by the risk-match endpoint to call Gemini's REST API directly
+  // (avoids a roundtrip through the Python ai-engine for this one feature).
+  // Same key the ai-engine uses — copy from ai-engine/.env if migrating.
+  geminiApiKey: required("GEMINI_API_KEY", process.env.GEMINI_API_KEY),
   // Convenience: re-export the chain bits so server code doesn't need two
   // imports for env access.
   chainId: publicEnv.chainId,
