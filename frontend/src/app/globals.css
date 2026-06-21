@@ -1,11 +1,15 @@
 @import "tailwindcss";
 
-/* StakePort is a dark-only product — we never want the body to flip to white
-   on light-mode OSes. Pure black is the canvas; surfaces lift via zinc-900/800.
-   Accent variables are exposed so component-level styles can reference them
-   without hard-coding hex values. */
+/* StakePort — dark only.
+   v2 (Phase 8): the background is no longer flat black. Two fixed layers
+   sit behind every page:
+     ::before — slow-drifting aurora (deep blue + teal + violet radials)
+     ::after  — faint dot/line grid with a soft radial mask
+   The shader hero on / sits in front of both; on every other page these
+   layers are the canvas. */
+
 :root {
-  --background: #000000;
+  --background: #07070b;
   --foreground: #ededed;
   --accent: #3b82f6;
   --accent-cyan: #06b6d4;
@@ -19,11 +23,55 @@ html {
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Aurora: three radial gradients fixed to the viewport, gently drifting.
+   The animation is intentionally slow — 36s — so it reads as ambient depth
+   rather than motion. We keep the colours <15% alpha so foreground text
+   never loses contrast. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -10%;
+  z-index: -2;
+  background:
+    radial-gradient(ellipse 80% 50% at 18% 8%, rgba(59, 130, 246, 0.14), transparent 60%),
+    radial-gradient(ellipse 70% 45% at 88% 92%, rgba(20, 184, 166, 0.08), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 52% 55%, rgba(124, 58, 237, 0.05), transparent 70%);
+  pointer-events: none;
+  animation: aurora-drift 36s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Grid mesh: 1px hairlines on a 64px cell. Masked from the centre outward
+   so it never reaches the screen edges — that's what gives the
+   "data terminal under glass" feel. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 95% 75% at 50% 32%, black 18%, transparent 82%);
+  -webkit-mask-image: radial-gradient(ellipse 95% 75% at 50% 32%, black 18%, transparent 82%);
+  pointer-events: none;
+}
+
+@keyframes aurora-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  33% { transform: translate3d(1.6%, -1.2%, 0); }
+  66% { transform: translate3d(-1.2%, 1.4%, 0); }
 }
 
 ::selection {
@@ -37,19 +85,13 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
 
 @layer utilities {
-  /* Marquee — used by MarketPulse. The strip is duplicated and we translate
-     -50% so the loop seams at the duplicate boundary. */
   .animate-marquee {
     animation: marquee 80s linear infinite;
     width: max-content;
   }
 
-  /* Subtle SVG grain you can layer over any block — gives texture without
-     shipping a noise PNG. The element needs position:relative for ::after to
-     anchor correctly. */
-  .grain {
-    position: relative;
-  }
+  /* Self-contained grain overlay. Needs position:relative on the host. */
+  .grain { position: relative; }
   .grain::after {
     content: "";
     position: absolute;
@@ -60,13 +102,7 @@ body {
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
-  /* ---- Brushed-titanium wordmark -------------------------------------
-     Used by the cinematic footer. The text is filled with a transparent
-     gradient — bright zinc-100 specular highlights at the head and middle
-     of the letterforms, fading to deep zinc-900 at the tail. The alpha is
-     baked into the colour stops so this stays subtle without a global
-     opacity that would mute the highlights too. Pair with .grain on the
-     parent for the dusty industrial finish. */
+  /* Brushed-titanium wordmark — used by the cinematic footer. */
   .wordmark-metallic {
     background-image: linear-gradient(
       102deg,
@@ -87,15 +123,31 @@ body {
     -webkit-text-fill-color: transparent;
   }
 
-  /* Section eyebrow — small uppercase tag with the brand spacing.
-     Saves repeating the same className soup in every editorial section. */
+  /* Section eyebrow — small uppercase tag with the brand spacing. */
   .eyebrow {
     font-size: 11px;
     line-height: 1;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: rgb(113 113 122); /* zinc-500 */
+    color: rgb(113 113 122);
     font-weight: 500;
+  }
+
+  /* Premium panel — used for KPI cards / right-rail panels.
+     Subtle bg, inner-glow ring at top edge, hover lift. */
+  .panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.005));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+  }
+
+  /* Glow shadow utility — premium emphasis on interactive surfaces. */
+  .ring-glow {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 10px 40px -16px rgba(59, 130, 246, 0.25);
   }
 }
 

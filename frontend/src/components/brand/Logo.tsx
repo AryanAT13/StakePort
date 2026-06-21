@@ -1,16 +1,16 @@
 import { SVGProps } from 'react';
 
 /**
- * StakePort brand mark.
+ * StakePort brand mark — v2 (Phase 8).
  *
- * Concept: three concentric rotated squares (diamonds). The outermost stroke
- * is the market — diffuse, thin. The middle stroke is the listing — defined.
- * The solid core is the asset itself. Together they read as "layered value"
- * or "vault" — financial seal energy without the cliché crypto coin or
- * stylized blockchain hexagon.
+ * The previous concentric-diamond was reading too generic-crypto. This mark
+ * is three offset slabs ascending diagonally — a stylised "stake" pile
+ * climbing into a port. Asymmetric on purpose (no centre symmetry) so it
+ * doesn't fall into the geometric-glyph cliché. Bottom slab is lowest
+ * opacity, top is full — gives the eye a clear directional read.
  *
- * The mark scales cleanly from 12px (favicon) up to 256px (brand hero) on
- * 1.1–1.4 stroke widths.
+ * Scales clean from 12px favicon to 256px brand hero on a 1.1–1.4 stroke /
+ * fill spread.
  */
 export function LogoMark({ className, ...props }: SVGProps<SVGSVGElement>) {
   return (
@@ -21,35 +21,24 @@ export function LogoMark({ className, ...props }: SVGProps<SVGSVGElement>) {
       className={className}
       {...props}
     >
-      {/* Outer ring — the market */}
-      <path
-        d="M12 1.5 L22.5 12 L12 22.5 L1.5 12 Z"
-        stroke="currentColor"
-        strokeWidth="1.1"
-        strokeLinejoin="round"
-        opacity="0.34"
-      />
-      {/* Middle ring — the listing */}
-      <path
-        d="M12 5.4 L18.6 12 L12 18.6 L5.4 12 Z"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-        opacity="0.68"
-      />
-      {/* Core — the asset */}
-      <path d="M12 9 L15 12 L12 15 L9 12 Z" fill="currentColor" />
+      {/* Bottom slab — base of the stack */}
+      <rect x="2" y="15.5" width="9" height="2.6" rx="0.6" fill="currentColor" opacity="0.32" />
+      {/* Middle slab — offset right, slightly wider */}
+      <rect x="6.5" y="10.8" width="11" height="2.6" rx="0.6" fill="currentColor" opacity="0.62" />
+      {/* Top slab — fully opaque, anchors the eye */}
+      <rect x="12" y="6" width="10" height="2.6" rx="0.6" fill="currentColor" />
     </svg>
   );
 }
 
 /**
- * Mark + wordmark lockup. The default size lands close to the 14–16px
- * cap-height of body text, so it composes cleanly inside navs.
+ * Mark + wordmark lockup. The default mark size lands close to the
+ * cap-height of 15px body text, so it composes inside navs without
+ * looking like a stickered logo.
  */
 export function LogoLockup({
   className = '',
-  markClassName = 'w-[18px] h-[18px] text-white',
+  markClassName = 'w-[20px] h-[20px] text-white',
   wordmarkClassName = 'text-[15px] font-semibold tracking-[-0.012em] text-white',
 }: {
   className?: string;
