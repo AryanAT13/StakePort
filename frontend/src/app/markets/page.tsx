@@ -26,6 +26,7 @@ import PortfolioValue from '@/components/PortfolioValue';
 import RecentActivity from '@/components/RecentActivity';
 import AddFundsModal from '@/components/AddFundsModal';
 import MarketFilters, { CategoryKey, SortKey } from '@/components/MarketFilters';
+import PageAtmosphere from '@/components/PageAtmosphere';
 import { useSession } from '@/hooks/useSession';
 import {
   MOCK_USDC_ADDRESS,
@@ -44,17 +45,33 @@ type MarketMeta = {
 };
 
 export default function MarketsPage() {
-  const { address } = useAccount();
-  const { user, loading: sessionLoading } = useSession();
+  const { address, isConnected } = useAccount();
+  const { user, loading: sessionLoading, resolved: sessionResolved } = useSession();
   const router = useRouter();
   const [addFundsOpen, setAddFundsOpen] = useState(false);
 
-  // ---- Auth gate (session-driven, see Phase 3 bug fix) ------------------
+  // ---- Auth gate ---------------------------------------------------------
+  // Phase 8.3 routing fix.
+  //
+  // The previous gate redirected anyone without a session straight to `/`.
+  // That's wrong for the most common case — a first-time visitor who just
+  // clicked "Open Terminal" has a wallet but no session yet. Sending them
+  // to / makes the button look broken (they bounce back to where they
+  // started).
+  //
+  // Correct destinations:
+  //   wallet connected, no session   → /onboarding (it owns SIWE + profile)
+  //   no wallet                      → /           (need to connect first)
+  //   session + onboarded            → render this page
+  //   session + NOT onboarded        → /onboarding
   useEffect(() => {
-    if (sessionLoading) return;
-    if (!user) { router.replace('/'); return; }
+    if (sessionLoading || !sessionResolved) return;
+    if (!user) {
+      router.replace(isConnected ? '/onboarding' : '/');
+      return;
+    }
     if (!user.onboarded) router.replace('/onboarding');
-  }, [sessionLoading, user, router]);
+  }, [sessionLoading, sessionResolved, user, isConnected, router]);
 
   // ---- KPI data ---------------------------------------------------------
   const { data: balanceData, refetch: refetchBalance } = useReadContract({
@@ -165,7 +182,7 @@ export default function MarketsPage() {
   }, [enriched, category, search, sort]);
 
   // ---- Render gate ------------------------------------------------------
-  if (sessionLoading || !user || !user.onboarded) {
+  if (sessionLoading || !sessionResolved || !user || !user.onboarded) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
         <p className="text-xs text-zinc-500 uppercase tracking-[0.22em]">Authenticating…</p>
@@ -178,11 +195,12 @@ export default function MarketsPage() {
   const noAssetsAtAll = !showSkeleton && assets.length === 0;
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="relative min-h-screen text-white">
+      <PageAtmosphere tone="cyan" />
       <Navbar />
       <MarketPulse />
 
-      <div className="max-w-7xl mx-auto px-6 py-10 md:py-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-10 md:py-12">
         {/* Greeting + page CTA */}
         <div className="flex items-end justify-between mb-10 flex-wrap gap-4">
           <div>

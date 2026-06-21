@@ -20,7 +20,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { decodeEventLog, parseEther } from 'viem';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Loader2, UploadCloud, X, Sparkles, Activity, Check, AlertTriangle } from 'lucide-react';
@@ -45,14 +45,18 @@ const INITIAL = {
 
 export default function CreateAssetWizard() {
   const router = useRouter();
-  const { user, loading: sessionLoading } = useSession();
+  const { user, loading: sessionLoading, resolved: sessionResolved } = useSession();
+  const { isConnected } = useAccount();
 
-  // ---- Auth gate (session-driven, same pattern as /markets) ------------
+  // ---- Auth gate (see /markets/page.tsx for routing rules) -------------
   useEffect(() => {
-    if (sessionLoading) return;
-    if (!user) router.replace('/');
-    else if (!user.onboarded) router.replace('/onboarding');
-  }, [sessionLoading, user, router]);
+    if (sessionLoading || !sessionResolved) return;
+    if (!user) {
+      router.replace(isConnected ? '/onboarding' : '/');
+      return;
+    }
+    if (!user.onboarded) router.replace('/onboarding');
+  }, [sessionLoading, sessionResolved, user, isConnected, router]);
 
   // ---- Wizard state ----------------------------------------------------
   const [step, setStep] = useState(1);
@@ -264,7 +268,7 @@ export default function CreateAssetWizard() {
   }
 
   // ---- Render gate ------------------------------------------------------
-  if (sessionLoading || !user || !user.onboarded) {
+  if (sessionLoading || !sessionResolved || !user || !user.onboarded) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
         <p className="text-xs text-zinc-500 uppercase tracking-[0.22em]">Authenticating…</p>

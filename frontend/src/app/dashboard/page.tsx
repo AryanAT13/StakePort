@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, Check, Loader2, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import PageAtmosphere from '@/components/PageAtmosphere';
 import { useSession } from '@/hooks/useSession';
 
 const INTERESTS = [
@@ -34,16 +35,19 @@ const RISK_PROFILES = [
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, loading: sessionLoading, refetch } = useSession();
-  const { address } = useAccount();
+  const { user, loading: sessionLoading, resolved: sessionResolved, refetch } = useSession();
+  const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
 
-  // ---- Auth gate ---------------------------------------------------------
+  // ---- Auth gate (see /markets/page.tsx for routing rules) -------------
   useEffect(() => {
-    if (sessionLoading) return;
-    if (!user) router.replace('/');
-    else if (!user.onboarded) router.replace('/onboarding');
-  }, [sessionLoading, user, router]);
+    if (sessionLoading || !sessionResolved) return;
+    if (!user) {
+      router.replace(isConnected ? '/onboarding' : '/');
+      return;
+    }
+    if (!user.onboarded) router.replace('/onboarding');
+  }, [sessionLoading, sessionResolved, user, isConnected, router]);
 
   // ---- Form state — hydrate from session, save on submit ----------------
   const [displayName, setDisplayName] = useState('');
@@ -118,7 +122,7 @@ export default function SettingsPage() {
     } catch {/* ignore clipboard failure */}
   }
 
-  if (sessionLoading || !user || !user.onboarded) {
+  if (sessionLoading || !sessionResolved || !user || !user.onboarded) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
         <p className="text-xs text-zinc-500 uppercase tracking-[0.22em]">Authenticating…</p>
@@ -127,10 +131,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="relative min-h-screen text-white">
+      <PageAtmosphere tone="violet" />
       <Navbar />
 
-      <div className="max-w-2xl mx-auto px-6 py-12 md:py-14">
+      <div className="relative z-10 max-w-2xl mx-auto px-6 py-12 md:py-14">
         <Link href="/markets" className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition mb-8">
           <ArrowLeft className="w-3.5 h-3.5" /> Back to markets
         </Link>
