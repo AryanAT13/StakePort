@@ -35,6 +35,8 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import PriceChart from '@/components/PriceChart';
+import AssetRiskBadge from '@/components/AssetRiskBadge';
+import PageAtmosphere from '@/components/PageAtmosphere';
 import { REAL_WORLD_ASSET_ABI, ERC20_ABI, MOCK_USDC_ADDRESS } from '@/constants/contracts';
 import { getClientPublicClient } from '@/lib/clientChain';
 import { formatCompactUsd } from '@/lib/format';
@@ -303,7 +305,8 @@ export default function AssetDetailsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="relative min-h-screen text-white">
+      <PageAtmosphere tone="cyan" />
       <Navbar />
 
       {/* Header strip */}
@@ -316,24 +319,21 @@ export default function AssetDetailsPage() {
         tradingActive={!!tradingActive}
       />
 
-      <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-12 gap-6 lg:gap-8">
-        {/* LEFT 8/12 */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-8 grid grid-cols-12 gap-6 lg:gap-8">
+        {/* LEFT 8/12 — visual + narrative.
+            Phase 8: stats row moved out to the right rail so the
+            prospectus can take the full column width. */}
         <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
           <ImageCarousel images={images.length ? images : [PLACEHOLDER]} sold={!!isSold} />
 
           <ChartFrame sold={!!isSold} assetAddress={assetAddress} />
 
-          <StatsRow
-            marketCap={marketCap}
-            valuation={valuationNum}
-            volume={totalVolume}
-            fairValue={fairValue}
-          />
-
           <AIProspectusCard prospectus={prospectus} loading={prospectusLoading} />
         </div>
 
-        {/* RIGHT 4/12 — action stack + ML Oracle (above-the-fold trading intel) */}
+        {/* RIGHT 4/12 — action + risk + oracle + dense stats grid.
+            Order chosen so the user reads top-down: act → confidence cue
+            → real-world anchor → raw numbers. */}
         <div className="col-span-12 lg:col-span-4 space-y-4">
           {isSold && (
             <CashOutPanel
@@ -378,7 +378,7 @@ export default function AssetDetailsPage() {
           )}
 
           {!isSold && !tradingActive && !isCreator && (
-            <div className="bg-zinc-950 border border-zinc-900 rounded-2xl p-6 text-center">
+            <div className="panel p-6 text-center">
               <p className="eyebrow mb-3">Status</p>
               <p className="text-sm text-zinc-400">
                 Market not yet initialised by the creator.
@@ -386,18 +386,27 @@ export default function AssetDetailsPage() {
             </div>
           )}
 
-          {/* Tx feedback now lives in toasts (top-level Toaster) — no need
-              to occupy real estate in the action column. See the trade-
-              indexing useEffect above. */}
+          {/* Risk-match — Gemini judges whether the asset fits the user's
+              onboarding-declared appetite. Renders nothing if the user
+              has no risk profile on file. */}
+          <AssetRiskBadge assetAddress={assetAddress} />
 
-          {/* ML Oracle — promoted into the action column so traders see it
-              before scrolling. The component below is the narrow-column
-              variant: stacked header, 2-stat footer, tighter copy. */}
+          {/* ML Oracle — narrow-column variant (stacked header, 2-stat footer). */}
           <MLFairValueGauge
             fair={fairValue}
             marketCap={marketCap}
             category={fairValueCategory}
             loading={fairValueLoading}
+          />
+
+          {/* Dense 2x2 stat grid. Sits under the oracle so the right rail
+              ends in a tight block of numbers — feels like a trading
+              terminal sidecar rather than an info dump. */}
+          <StatsGrid
+            marketCap={marketCap}
+            valuation={valuationNum}
+            volume={totalVolume}
+            fairValue={fairValue}
           />
         </div>
       </div>
@@ -592,14 +601,14 @@ function ChartFrame({ sold, assetAddress }: { sold: boolean; assetAddress: strin
 /* STATS ROW                                                               */
 /* ══════════════════════════════════════════════════════════════════════ */
 
-function StatsRow({
+function StatsGrid({
   marketCap, valuation, volume, fairValue,
 }: {
   marketCap: number; valuation: number; volume: number; fairValue: number | null;
 }) {
   const spread = fairValue && fairValue > 0 && marketCap > 0 ? ((marketCap - fairValue) / fairValue) * 100 : null;
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 gap-3">
       <Stat label="Market Cap" value={marketCap > 0 ? formatCompactUsd(marketCap) : '—'} />
       <Stat label="Valuation" value={valuation > 0 ? formatCompactUsd(valuation) : '—'} />
       <Stat label="Volume" value={volume > 0 ? formatCompactUsd(volume) : '$0.00'} />
@@ -614,9 +623,9 @@ function StatsRow({
 
 function Stat({ label, value, valueClass = '' }: { label: string; value: string; valueClass?: string }) {
   return (
-    <div className="bg-zinc-950/70 border border-zinc-900 rounded-xl p-4">
+    <div className="panel p-4">
       <p className="text-[10px] uppercase tracking-[0.18em] text-zinc-500 mb-2">{label}</p>
-      <p className={`text-lg font-mono font-semibold tabular-nums ${valueClass}`}>{value}</p>
+      <p className={`text-base font-mono font-semibold tabular-nums ${valueClass}`}>{value}</p>
     </div>
   );
 }
