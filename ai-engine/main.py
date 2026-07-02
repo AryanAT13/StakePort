@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 from serpapi import GoogleSearch
 from sklearn.ensemble import IsolationForest
+from risk_engine import score_asset
 
 load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -35,6 +36,15 @@ class AssetContext(BaseModel):
 
 class PricingContext(BaseModel):
     name: str
+
+class RiskContext(BaseModel):
+    name: str
+    category: str = "GENERAL"
+    valuation: float
+    fair_value: float | None = None
+    liquidity_usdc: float | None = None
+    price_history: list[float] = []
+    user_profile: str | None = None  # conservative | moderate | aggressive
 
 def extract_prices_from_text(text):
     """Finds dollar amounts in raw text (e.g., '$1,200,000' -> 1200000.0)"""
@@ -156,3 +166,96 @@ async def get_fair_value(asset: PricingContext):
     except Exception as e:
         print(f"Pricing Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to calculate fair value.")
+
+
+# ---------------------------------------------------------------------------
+# RISK ALIGNMENT
+# Quant risk score (gradient-boosted classifier, see risk_engine.py) +
+# alignment against the user's stated profile + an LLM-written friendly line.
+# ---------------------------------------------------------------------------
+
+# How well the asset's tier matches the buyer's appetite. The matrix is
+# intentionally asymmetric: a conservative buyer eyeing an aggressive asset is
+# a sharper mismatch than the reverse, because downside surprise hurts the
+# risk-averse more than missed upside hurts the risk-tolerant.
+def _alignment(user_profile: str, asset_tier: str) -> str:
+    order = {"conservative": 0, "moderate": 1, "aggressive": 2}
+    if user_profile not in order:
+        return "medium"
+    gap = abs(order[user_profile] - order[asset_tier])
+    if gap == 0:
+        return "high"
+    if gap == 1:
+        return "medium"
+    return "low"
+
+
+@app.post("/api/risk-score")
+async def risk_score(ctx: RiskContext):
+    """Pure quant scoring — no LLM. Used by the frontend to render the gauge
+    and to drive the alignment verdict. Cheap + deterministic."""
+    try:
+        result = score_asset(
+            price_history=ctx.price_history,
+            category=ctx.category,
+            valuation=ctx.valuation,
+            fair_value=ctx.fair_value,
+            liquidity_usdc=ctx.liquidity_usdc,
+        )
+        if ctx.user_profile:
+            result["alignment"] = _alignment(ctx.user_profile, result["risk_tier"])
+        return result
+    except Exception as e:
+        print(f"Risk Score Error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to score risk.")
+
+
+@app.post("/api/risk-alignment")
+async def risk_alignment(ctx: RiskContext):
+    """Full pipeline: quant score → alignment → LLM one-liner.
+
+    The model classifies; the LLM ONLY writes the casual explanation. We keep
+    the LLM on a tight leash (one short sentence) so the copy stays punchy and
+    the structured fields stay machine-authoritative.
+    """
+    try:
+        result = score_asset(
+            price_history=ctx.price_history,
+            category=ctx.category,
+            valuation=ctx.valuation,
+            fair_value=ctx.fair_value,
+            liquidity_usdc=ctx.liquidity_usdc,
+        )
+        profile = (ctx.user_profile or "moderate").lower()
+        align = _alignment(profile, result["risk_tier"])
+        result["alignment"] = align
+
+        # LLM writes ONLY the friendly line. Structured risk stays from the model.
+        model = genai.GenerativeModel("gemini-3.5-flash")
+        prompt = f"""You are a cool, friendly investing buddy on a fractional-ownership app.
+
+A user whose risk appetite is "{profile}" is looking at "{ctx.name}".
+Our quant model rated this asset's risk tier as "{result['risk_tier']}" (risk score {result['risk_score']}/100).
+The alignment with the user's appetite is "{align}".
+
+Write ONE short, casual sentence (max 18 words) telling them how this asset fits their vibe.
+No jargon, no hype, no emojis. Sound human and a little witty. Refer to the asset by a natural short name.
+Return ONLY the sentence."""
+        try:
+            line = model.generate_content(prompt).text.strip().strip('"')
+        except Exception as le:
+            print(f"Risk LLM fallback: {le}")
+            # Deterministic fallback copy if Gemini is unreachable.
+            fallback = {
+                "high": f"This one sits right in your {profile} comfort zone.",
+                "medium": f"A bit of a stretch for a {profile} appetite, but not wild.",
+                "low": f"This may be outside your usual {profile} comfort zone for risk.",
+            }
+            line = fallback.get(align, fallback["medium"])
+
+        result["explanation"] = line
+        result["profile"] = profile
+        return result
+    except Exception as e:
+        print(f"Risk Alignment Error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to compute risk alignment.")
