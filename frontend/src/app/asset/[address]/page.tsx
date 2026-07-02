@@ -30,12 +30,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { decodeEventLog, formatEther, parseEther, parseAbiItem } from 'viem';
-import { Activity, AlertTriangle, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Activity, AlertTriangle, ChevronLeft, ChevronRight, Lock, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import PriceChart from '@/components/PriceChart';
-import AssetRiskBadge from '@/components/AssetRiskBadge';
+import RiskAlignmentCard from '@/components/RiskAlignmentCard';
 import PageAtmosphere from '@/components/PageAtmosphere';
 import { REAL_WORLD_ASSET_ABI, ERC20_ABI, MOCK_USDC_ADDRESS } from '@/constants/contracts';
 import { getClientPublicClient } from '@/lib/clientChain';
@@ -59,6 +59,11 @@ export default function AssetDetailsPage() {
   const { data: totalSupply } = useReadContract({ address: assetAddress, abi: REAL_WORLD_ASSET_ABI, functionName: 'totalSupply' });
   const { data: tradingActive, refetch: refetchActive } = useReadContract({ address: assetAddress, abi: REAL_WORLD_ASSET_ABI, functionName: 'tradingActive' });
   const { data: isSold, refetch: refetchSold } = useReadContract({ address: assetAddress, abi: REAL_WORLD_ASSET_ABI, functionName: 'sold' });
+  // Phase 9 vesting reads. These functions only exist on the new contract;
+  // for legacy/old-deploy assets the read errors out and `data` is undefined,
+  // which we treat as "not locked" so the UI degrades gracefully.
+  const { data: creatorLocked } = useReadContract({ address: assetAddress, abi: REAL_WORLD_ASSET_ABI, functionName: 'isCreatorLocked' });
+  const { data: creatorUnlockAt } = useReadContract({ address: assetAddress, abi: REAL_WORLD_ASSET_ABI, functionName: 'creatorUnlockTime' });
   const { data: assetBalance, refetch: refetchAssetBal } = useReadContract({
     address: assetAddress, abi: REAL_WORLD_ASSET_ABI, functionName: 'balanceOf',
     args: [userAddress as `0x${string}`], query: { enabled: !!userAddress },
@@ -328,6 +333,10 @@ export default function AssetDetailsPage() {
 
           <ChartFrame sold={!!isSold} assetAddress={assetAddress} />
 
+          {/* Task 3: Risk Alignment — buyer-only, directly below the price
+              graph. Quant-scored (gradient-boosted model) + LLM one-liner. */}
+          <RiskAlignmentCard assetAddress={assetAddress} isCreator={isCreator} />
+
           <AIProspectusCard prospectus={prospectus} loading={prospectusLoading} />
         </div>
 
@@ -354,6 +363,9 @@ export default function AssetDetailsPage() {
               allowance={usdcAllowance as bigint | undefined}
               writeContract={writeContract}
               isPending={isPending}
+              isCreator={isCreator}
+              creatorLocked={!!creatorLocked}
+              creatorUnlockAt={creatorUnlockAt as bigint | undefined}
             />
           )}
 
@@ -385,11 +397,6 @@ export default function AssetDetailsPage() {
               </p>
             </div>
           )}
-
-          {/* Risk-match — Gemini judges whether the asset fits the user's
-              onboarding-declared appetite. Renders nothing if the user
-              has no risk profile on file. */}
-          <AssetRiskBadge assetAddress={assetAddress} />
 
           {/* ML Oracle — narrow-column variant (stacked header, 2-stat footer). */}
           <MLFairValueGauge
@@ -635,8 +642,17 @@ function Stat({ label, value, valueClass = '' }: { label: string; value: string;
 /* ══════════════════════════════════════════════════════════════════════ */
 
 function AIProspectusCard({ prospectus, loading }: { prospectus: string; loading: boolean }) {
+  // Task 4: full-width prospectus. The card already spans the full left
+  // column; we additionally flow the prose into two balanced text columns on
+  // wide screens so the report reads horizontally instead of as one tall
+  // ribbon — roughly halving the vertical height. `break-inside-avoid` on
+  // paragraphs keeps sentences from splitting awkwardly across the gutter.
+  const paragraphs = prospectus
+    ? prospectus.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
+    : [];
+
   return (
-    <div className="bg-zinc-950/70 border border-zinc-900 rounded-2xl p-6 md:p-8">
+    <div className="panel p-6 md:p-8">
       <div className="flex items-end justify-between mb-6">
         <div>
           <p className="eyebrow flex items-center gap-2">
@@ -646,21 +662,37 @@ function AIProspectusCard({ prospectus, loading }: { prospectus: string; loading
             Gemini multimodal · investment prospectus
           </p>
         </div>
+        <span className="hidden md:inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-zinc-600 border border-zinc-800 rounded-full px-2.5 py-1">
+          Christie&apos;s-grade
+        </span>
       </div>
 
       {loading ? (
-        <div className="space-y-2.5 animate-pulse">
-          <div className="h-3 bg-zinc-900 rounded w-full" />
-          <div className="h-3 bg-zinc-900 rounded w-11/12" />
-          <div className="h-3 bg-zinc-900 rounded w-9/12" />
-          <div className="h-3 bg-zinc-900 rounded w-full mt-5" />
-          <div className="h-3 bg-zinc-900 rounded w-10/12" />
-          <div className="h-3 bg-zinc-900 rounded w-8/12" />
+        <div className="grid md:grid-cols-2 gap-x-10 gap-y-2.5 animate-pulse">
+          <div className="space-y-2.5">
+            <div className="h-3 bg-zinc-900 rounded w-full" />
+            <div className="h-3 bg-zinc-900 rounded w-11/12" />
+            <div className="h-3 bg-zinc-900 rounded w-9/12" />
+            <div className="h-3 bg-zinc-900 rounded w-full" />
+          </div>
+          <div className="space-y-2.5">
+            <div className="h-3 bg-zinc-900 rounded w-full" />
+            <div className="h-3 bg-zinc-900 rounded w-10/12" />
+            <div className="h-3 bg-zinc-900 rounded w-8/12" />
+            <div className="h-3 bg-zinc-900 rounded w-11/12" />
+          </div>
         </div>
-      ) : prospectus ? (
-        <p className="text-zinc-300 text-sm md:text-base leading-relaxed whitespace-pre-line">
-          {prospectus}
-        </p>
+      ) : paragraphs.length > 0 ? (
+        <div className="lg:columns-2 lg:gap-10 [column-fill:balance]">
+          {paragraphs.map((para, i) => (
+            <p
+              key={i}
+              className="text-zinc-300 text-sm md:text-[15px] leading-relaxed mb-4 break-inside-avoid"
+            >
+              {para}
+            </p>
+          ))}
+        </div>
       ) : (
         <p className="text-zinc-600 text-sm">No prospectus available. The AI engine may be offline.</p>
       )}
@@ -775,10 +807,12 @@ type WriteFn = ReturnType<typeof useWriteContract>['writeContract'];
 
 function TradePanel({
   assetAddress, symbol, usdcBalance, assetBalance, allowance, writeContract, isPending,
+  isCreator, creatorLocked, creatorUnlockAt,
 }: {
   assetAddress: `0x${string}`; symbol: string;
   usdcBalance: bigint | undefined; assetBalance: bigint | undefined; allowance: bigint | undefined;
   writeContract: WriteFn; isPending: boolean;
+  isCreator: boolean; creatorLocked: boolean; creatorUnlockAt: bigint | undefined;
 }) {
   const [mode, setMode] = useState<'buy' | 'sell'>('buy');
   const [amount, setAmount] = useState('');
@@ -786,6 +820,18 @@ function TradePanel({
   const userBal = mode === 'buy'
     ? (usdcBalance ? parseFloat(formatEther(usdcBalance)) : 0)
     : (assetBalance ? parseFloat(formatEther(assetBalance)) : 0);
+
+  // Phase 9 vesting: the creator's founder shares are frozen for sale until
+  // the lockup elapses. This blocks the rug-pull (dumping on retail after a
+  // pump) while leaving buyout-driven cashOut fully available. We only gate
+  // the SELL side for the creator; buys are always allowed.
+  const sellBlockedByVesting = isCreator && mode === 'sell' && creatorLocked;
+  const unlockLabel = (() => {
+    if (!creatorUnlockAt || creatorUnlockAt === 0n) return null;
+    const unlockMs = Number(creatorUnlockAt) * 1000;
+    const days = Math.max(0, Math.ceil((unlockMs - Date.now()) / 86_400_000));
+    return days > 0 ? `${days} day${days === 1 ? '' : 's'}` : 'soon';
+  })();
 
   // For buy: need USDC approval to the asset contract.
   // For sell: need ASSET token approval — we use a sub-contract approve in
@@ -883,10 +929,21 @@ function TradePanel({
         ))}
       </div>
 
+      {/* Vesting lock banner — only when the creator tries to sell early. */}
+      {sellBlockedByVesting && (
+        <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-amber-500/25 bg-amber-500/[0.05] px-3 py-2.5">
+          <Lock className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
+          <p className="text-[11px] text-amber-200/90 leading-snug">
+            Your founder shares are vesting{unlockLabel ? ` — unlock in ${unlockLabel}` : ''}.
+            Anti-rug lock; a hostile buyout still pays you out in full.
+          </p>
+        </div>
+      )}
+
       {/* CTA */}
       <button
         onClick={needsApprove ? handleApprove : handleTrade}
-        disabled={isPending || !amount || parsedAmount === 0n}
+        disabled={isPending || !amount || parsedAmount === 0n || sellBlockedByVesting}
         className={`w-full py-3.5 rounded-lg font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed ${
           needsApprove
             ? 'bg-white text-black hover:bg-zinc-100'
@@ -895,7 +952,9 @@ function TradePanel({
             : 'bg-red-500 text-white hover:bg-red-400'
         }`}
       >
-        {isPending
+        {sellBlockedByVesting
+          ? 'Founder shares locked'
+          : isPending
           ? 'Confirm in wallet…'
           : needsApprove
           ? 'Unlock USDC'
@@ -905,7 +964,7 @@ function TradePanel({
       </button>
 
       <p className="text-[10px] text-zinc-600 mt-3 text-center font-mono">
-        AMM · x·y=k · slippage priced on-chain
+        AMM · x·y=k · 2% fee retained in pool
       </p>
     </div>
   );

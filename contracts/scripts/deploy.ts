@@ -5,7 +5,6 @@ async function main() {
 
   console.log("Deploying contracts with the account:", deployer.address);
 
-  // 1. Deploy the Fake Money (MockUSDC)
   const MockUSDC = await ethers.getContractFactory("MockUSDC");
   const mockUSDC = await MockUSDC.deploy(deployer.address);
   await mockUSDC.waitForDeployment();
@@ -13,7 +12,6 @@ async function main() {
   
   console.log(`MockUSDC deployed to: ${usdcAddress}`);
 
-  // 2. Deploy the Asset Factory (and tell it which currency to use)
   const AssetFactory = await ethers.getContractFactory("AssetFactory");
   const assetFactory = await AssetFactory.deploy(usdcAddress);
   await assetFactory.waitForDeployment();
