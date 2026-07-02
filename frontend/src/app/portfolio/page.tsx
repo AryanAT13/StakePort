@@ -32,6 +32,7 @@ import { ArrowUpRight, TrendingUp, TrendingDown } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import PageAtmosphere from '@/components/PageAtmosphere';
 import PnLSparkline, { Point } from '@/components/PnLSparkline';
+import VaultSection from '@/components/VaultSection';
 import { useSession } from '@/hooks/useSession';
 import {
   ASSET_FACTORY_ADDRESS,
@@ -491,6 +492,10 @@ export default function Portfolio() {
             P&L appears once you trade — the table indexes every buy/sell from your wallet.
           </p>
         )}
+
+        {/* Task 5: The Vault — settled / acquired assets. Self-hides when the
+            platform has no bought-out assets the user has a stake in. */}
+        <VaultSection assets={assets} userAddress={address} />
       </div>
     </main>
   );
