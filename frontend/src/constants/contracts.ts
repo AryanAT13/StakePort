@@ -32,6 +32,15 @@ export const REAL_WORLD_ASSET_ABI = parseAbi([
   "function allowance(address owner, address spender) view returns (uint256)",
   "function sold() view returns (bool)",
   "function owner() view returns (address)",
+  // --- Phase 9: vesting + buyout/vault reads ---
+  "function isCreatorLocked() view returns (bool)",
+  "function creatorUnlockTime() view returns (uint256)",
+  "function liquidityInitializedAt() view returns (uint256)",
+  "function buyoutBuyer() view returns (address)",
+  "function buyoutPrice() view returns (uint256)",
+  "function finalCashPerToken() view returns (uint256)",
+  "function buyoutShare(address) view returns (uint256)",
+  "function SWAP_FEE_BPS() view returns (uint256)",
   // --- writes ---
   "function approve(address spender, uint256 amount) returns (bool)",
   "function buyTokens(uint256 usdcInput) external",
@@ -41,7 +50,6 @@ export const REAL_WORLD_ASSET_ABI = parseAbi([
   "function cashOut() external",
   // --- buyout state ---
   "function buyoutProposed() view returns (bool)",
-  "function buyoutPrice() view returns (uint256)",
   // --- events (used by the chart + activity feed) ---
   "event Traded(address indexed user, string action, uint256 amountIn, uint256 amountOut, uint256 newPrice)",
 ]);
