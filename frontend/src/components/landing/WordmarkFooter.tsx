@@ -48,7 +48,7 @@ export default function WordmarkFooter() {
             <p className="eyebrow mb-4">Resources</p>
             <ul className="space-y-2.5 text-sm text-zinc-300">
               <li><a href="#mechanism" className="hover:text-white transition">Mechanism</a></li>
-              <li><a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-white transition">GitHub</a></li>
+              <li><a href="https://github.com/AryanAT13/StakePort" target="_blank" rel="noreferrer" className="hover:text-white transition">GitHub</a></li>
               <li><span className="text-zinc-600">Whitepaper · soon</span></li>
             </ul>
           </div>
@@ -57,7 +57,6 @@ export default function WordmarkFooter() {
             <p className="eyebrow mb-4">Network</p>
             <ul className="space-y-2.5 text-sm text-zinc-300">
               <li>Testnet live</li>
-              <li>Open source</li>
             </ul>
           </div>
         </div>
@@ -90,7 +89,6 @@ export default function WordmarkFooter() {
             stacked blocks. */}
         <div className="absolute bottom-5 inset-x-0 px-6 z-20 flex items-center justify-between text-[11px] text-zinc-500 font-mono">
           <span>© {new Date().getFullYear()} StakePort</span>
-          <span>v0.2 · testnet</span>
         </div>
       </div>
     </footer>

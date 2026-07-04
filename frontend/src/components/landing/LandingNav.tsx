@@ -59,7 +59,7 @@ export default function LandingNav() {
             Mechanism
           </a>
           <a
-            href="https://github.com"
+            href="https://github.com/AryanAT13/StakePort"
             target="_blank"
             rel="noreferrer"
             className="text-zinc-400 hover:text-white transition"
