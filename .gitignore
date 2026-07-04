@@ -30,6 +30,7 @@ contracts/cache/
 contracts/typechain-types/
 contracts/coverage/
 contracts/coverage.json
+contracts/deployed.*.json
 hardhat-network-dapp-state.json
 
 # ---- Next.js / frontend ----
