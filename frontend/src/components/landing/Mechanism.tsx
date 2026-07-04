@@ -17,21 +17,21 @@ const RAILS = [
     tag: 'The AMM',
     headline: 'Every share has a price, every second.',
     body:
-      'A constant-product pool quotes fractions continuously — no order books, no makers, no waiting. The first trade and the millionth clear at the same speed, on the same curve, with the same math.',
+      'A constant-product pool quotes fractions continuously: no order books, no makers, no waiting. The first trade and the millionth clear at the same speed, on the same curve, with the same math.',
   },
   {
     n: '02',
     tag: 'The Appraiser',
     headline: 'Every listing speaks the same language.',
     body:
-      'A multimodal model reads the seller\'s photos and notes, then writes a standardised investment prospectus — the kind a Sotheby\'s analyst would put on a tear sheet. Buyers get an apples-to-apples briefing on every asset. Sellers stop writing copy.',
+      'A multimodal model reads the seller\'s photos and notes, then writes a standardised investment prospectus, the kind a Sotheby\'s analyst would put on a tear sheet. Buyers get an apples-to-apples briefing on every asset. Sellers stop writing copy.',
   },
   {
     n: '03',
     tag: 'The Oracle',
     headline: 'Every price is anchored to reality.',
     body:
-      'A Python service pulls live comps from Chrono24, Zillow, the auctioneers — then routes them through an isolation forest that drops counterfeits, parts listings, and noise. What survives is the cluster. The median of the cluster is the floor.',
+      'A Python service pulls live comps from Chrono24, Zillow, the auctioneers, then routes them through an isolation forest that drops counterfeits, parts listings, and noise. What survives is the cluster. The median of the cluster is the floor.',
   },
 ];
 

@@ -28,7 +28,7 @@ export default function CTASection() {
 
           <p className="text-zinc-400 text-lg md:text-xl max-w-xl mb-12 leading-[1.55]">
             Mint a testnet USDC balance. Trade your first fractional share.
-            Sixty seconds — and you&apos;re in.
+            Sixty seconds, and you&apos;re in.
           </p>
 
           <EnterTerminalButton size="lg" />
