@@ -20,13 +20,29 @@ SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 
 app = FastAPI()
 
+# CORS: in production, lock this to the deployed frontend origin(s) via the
+# FRONTEND_ORIGINS env var (comma-separated). Falls back to "*" for local dev.
+# The Next.js server calls this service server-to-server so browser CORS only
+# matters if you ever call it directly from the client — but tight is correct.
+_origins_env = os.getenv("FRONTEND_ORIGINS", "*")
+ALLOWED_ORIGINS = ["*"] if _origins_env.strip() == "*" else [
+    o.strip() for o in _origins_env.split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Lightweight health probe — Render pings this to confirm the service is up,
+# and it warms the ML model on first hit (the classifier trains lazily).
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "stakeport-ai-engine"}
 
 # --- DATA MODELS ---
 class AssetContext(BaseModel):

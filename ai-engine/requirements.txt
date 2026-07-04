@@ -1,5 +1,6 @@
 fastapi
 uvicorn
+gunicorn
 google-generativeai
 google-search-results
 scikit-learn

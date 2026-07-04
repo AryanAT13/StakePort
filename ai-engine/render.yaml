@@ -1,0 +1,24 @@
+# Render blueprint for the StakePort AI engine (FastAPI).
+# Deploy: push to GitHub → Render → New → Blueprint → point at this repo.
+# Render auto-detects this file. Free tier: the service sleeps after 15 min of
+# inactivity and cold-starts (~30-50s) on the next request — fine for a demo.
+services:
+  - type: web
+    name: stakeport-ai-engine
+    runtime: python
+    rootDir: ai-engine
+    plan: free
+    # gunicorn with a uvicorn worker is the production-grade way to run FastAPI.
+    # Single worker keeps the trained ML model in one process (free tier RAM).
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn main:app -w 1 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT --timeout 120
+    healthCheckPath: /health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false      # set in the Render dashboard (secret)
+      - key: SERPAPI_KEY
+        sync: false      # set in the Render dashboard (secret)
+      - key: FRONTEND_ORIGINS
+        sync: false      # e.g. https://stakeport.vercel.app
+      - key: PYTHON_VERSION
+        value: "3.12.7"
