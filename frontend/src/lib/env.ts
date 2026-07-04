@@ -14,6 +14,9 @@ function optional(value: string | undefined, fallback: string): string {
 export const publicEnv = {
   // 31337 = Hardhat local. Default keeps `npm run dev` working with no setup.
   chainId: Number(optional(process.env.NEXT_PUBLIC_CHAIN_ID, "31337")),
+  // Raw RPC value from the env. It may arrive dirty (quotes/whitespace on
+  // Vercel) — do NOT hand this straight to a transport. Consume it via
+  // `getRpcUrl()` in lib/rpc.ts, which sanitizes + validates it.
   rpcUrl: optional(process.env.NEXT_PUBLIC_RPC_URL, "http://127.0.0.1:8545"),
   blockExplorer: optional(process.env.NEXT_PUBLIC_BLOCK_EXPLORER_URL, ""),
   mockUsdcAddress: optional(

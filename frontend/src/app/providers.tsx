@@ -13,6 +13,7 @@ import { http } from 'viem';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { publicEnv } from '@/lib/env';
+import { getRpcUrl } from '@/lib/rpc';
 
 /**
  * Web3 + data providers.
@@ -58,20 +59,18 @@ const connectors = connectorsForWallets(
   }
 );
 
-// Transport per chain. Sepolia uses NEXT_PUBLIC_RPC_URL in production (a real
-// Alchemy/Infura endpoint) so we're not hammering the flaky public RPC; it
-// falls back to the public node only when the env var is unset (local dev).
-const sepoliaRpc =
-  publicEnv.chainId === sepolia.id && publicEnv.rpcUrl
-    ? publicEnv.rpcUrl
-    : 'https://ethereum-sepolia-rpc.publicnode.com';
-
+// Transport per chain. The ACTIVE chain (the one matching NEXT_PUBLIC_CHAIN_ID)
+// gets our sanitized RPC endpoint from getRpcUrl(); the inactive chain gets
+// `http()` with no argument so viem uses its own bundled default — there are
+// NO hard-coded RPC URLs here. This guarantees the endpoint the app actually
+// talks to is always the strictly-validated NEXT_PUBLIC_RPC_URL.
+const activeRpc = getRpcUrl();
 const wagmiConfig = createConfig({
   chains: [preferred, ...rest] as unknown as readonly [typeof preferred, ...typeof rest],
   connectors,
   transports: {
-    [hardhat.id]: http(publicEnv.rpcUrl),
-    [sepolia.id]: http(sepoliaRpc),
+    [hardhat.id]: preferred.id === hardhat.id ? http(activeRpc) : http(),
+    [sepolia.id]: preferred.id === sepolia.id ? http(activeRpc) : http(),
   },
   ssr: true,
 });

@@ -12,6 +12,7 @@
 import { createPublicClient, http, defineChain, type Chain } from "viem";
 import { hardhat, sepolia, polygon, mainnet, base, arbitrum, optimism } from "viem/chains";
 import { publicEnv } from "./env";
+import { getRpcUrl } from "./rpc";
 
 const known: Record<number, Chain> = {
   [hardhat.id]: hardhat,
@@ -24,15 +25,26 @@ const known: Record<number, Chain> = {
 };
 
 export function getClientChain(): Chain {
-  return (
-    known[publicEnv.chainId] ??
-    defineChain({
-      id: publicEnv.chainId,
-      name: `Chain ${publicEnv.chainId}`,
-      nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-      rpcUrls: { default: { http: [publicEnv.rpcUrl] } },
-    })
-  );
+  // Always overlay our resolved RPC url onto the chain's rpcUrls so viem never
+  // reaches for its bundled public endpoint.
+  const rpc = getRpcUrl();
+  const base = known[publicEnv.chainId];
+  if (base) {
+    return {
+      ...base,
+      rpcUrls: {
+        ...base.rpcUrls,
+        default: { http: [rpc] },
+        public: { http: [rpc] },
+      },
+    };
+  }
+  return defineChain({
+    id: publicEnv.chainId,
+    name: `Chain ${publicEnv.chainId}`,
+    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+    rpcUrls: { default: { http: [rpc] } },
+  });
 }
 
 let _client: ReturnType<typeof createPublicClient> | null = null;
@@ -40,7 +52,8 @@ export function getClientPublicClient() {
   if (_client) return _client;
   _client = createPublicClient({
     chain: getClientChain(),
-    transport: http(publicEnv.rpcUrl),
+    // Sanitized, validated absolute URL — never a raw env string.
+    transport: http(getRpcUrl()),
   });
   return _client;
 }
