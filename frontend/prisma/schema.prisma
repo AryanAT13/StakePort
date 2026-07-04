@@ -1,14 +1,25 @@
 // StakePort persistence layer.
-// SQLite for zero-config local dev; the schema is Postgres-clean so we can
-// flip the provider when we deploy without touching field types.
+//
+// Production: PostgreSQL (Neon / Supabase free tier). The schema was authored
+// Postgres-clean from day one, so the only change from the old SQLite setup is
+// the datasource block below.
+//
+// Serverless note: on Vercel, every lambda opens its own DB connection, which
+// exhausts a raw Postgres pool fast. We connect through the provider's POOLED
+// url (`DATABASE_URL`, pgbouncer) for queries and a DIRECT url (`DIRECT_URL`)
+// for migrations / db push, which pgbouncer can't do in transaction mode.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Vercel/AWS Lambda runs on RHEL+OpenSSL 3; bundling that engine target
+  // avoids "Query engine binary not found" at runtime.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // One row per connected wallet. We treat the lowercased EVM address as the
@@ -20,7 +31,7 @@ model User {
   displayName   String?
   avatarUrl     String?
   ageConfirmed  Boolean   @default(false)
-  interests     String?   // JSON-encoded string[] — SQLite has no native array
+  interests     String?   // JSON-encoded string[] — kept as text for portability
   riskProfile   String?   // 'conservative' | 'moderate' | 'aggressive'
   onboardedAt   DateTime?
   createdAt     DateTime  @default(now())
