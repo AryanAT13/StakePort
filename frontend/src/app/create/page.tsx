@@ -291,7 +291,7 @@ export default function CreateAssetWizard() {
         <p className="text-zinc-400 text-base md:text-lg mb-12 md:mb-14 max-w-xl">
           {step === 1 && 'The basics. You can edit any of this later — names and tickers are how buyers find the market.'}
           {step === 2 && 'Drop your imagery. The first photo becomes the listing thumbnail and the input to the AI appraiser.'}
-          {step === 3 && 'Gemini writes the prospectus. The ML oracle scrapes real-world comps. Both run before you sign anything.'}
+          {step === 3 && 'LLM writes the prospectus. The ML oracle scrapes real-world comps. Both run before you sign anything.'}
           {step === 4 && 'One signature deploys the contract and mints 1,000 shares to your wallet.'}
         </p>
 
@@ -552,7 +552,7 @@ function Step3({
             <p className="eyebrow flex items-center gap-2">
               <Sparkles className="w-3 h-3" /> AI Prospectus
             </p>
-            <p className="text-xs text-zinc-600 mt-1 font-mono">Gemini · multimodal</p>
+            <p className="text-xs text-zinc-600 mt-1 font-mono">LLM · multimodal</p>
           </div>
           {form.prospectus && (
             <button onClick={onRegenerate} className="text-xs text-zinc-400 hover:text-white transition">

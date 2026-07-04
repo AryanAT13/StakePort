@@ -656,10 +656,10 @@ function AIProspectusCard({ prospectus, loading }: { prospectus: string; loading
       <div className="flex items-end justify-between mb-6">
         <div>
           <p className="eyebrow flex items-center gap-2">
-            <Sparkles className="w-3 h-3" /> AI Appraiser
+            <Sparkles className="w-3 h-3" />Appraiser
           </p>
           <p className="text-xs text-zinc-600 mt-1.5 font-mono">
-            Gemini multimodal · investment prospectus
+            Multimodal · Investment Prospectus
           </p>
         </div>
         <span className="hidden md:inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-zinc-600 border border-zinc-800 rounded-full px-2.5 py-1">
