@@ -642,11 +642,11 @@ function Stat({ label, value, valueClass = '' }: { label: string; value: string;
 /* ══════════════════════════════════════════════════════════════════════ */
 
 function AIProspectusCard({ prospectus, loading }: { prospectus: string; loading: boolean }) {
-  // Task 4: full-width prospectus. The card already spans the full left
-  // column; we additionally flow the prose into two balanced text columns on
-  // wide screens so the report reads horizontally instead of as one tall
-  // ribbon — roughly halving the vertical height. `break-inside-avoid` on
-  // paragraphs keeps sentences from splitting awkwardly across the gutter.
+  // The prospectus card spans the full left column and the prose flows
+  // naturally across the entire width — one single-column stream, no
+  // column-splitting. Wide-and-short instead of tall-and-narrow, which
+  // minimises vertical scroll. `max-w-none` defeats any prose max-width so
+  // the text truly uses the full container width.
   const paragraphs = prospectus
     ? prospectus.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
     : [];
@@ -668,27 +668,16 @@ function AIProspectusCard({ prospectus, loading }: { prospectus: string; loading
       </div>
 
       {loading ? (
-        <div className="grid md:grid-cols-2 gap-x-10 gap-y-2.5 animate-pulse">
-          <div className="space-y-2.5">
-            <div className="h-3 bg-zinc-900 rounded w-full" />
-            <div className="h-3 bg-zinc-900 rounded w-11/12" />
-            <div className="h-3 bg-zinc-900 rounded w-9/12" />
-            <div className="h-3 bg-zinc-900 rounded w-full" />
-          </div>
-          <div className="space-y-2.5">
-            <div className="h-3 bg-zinc-900 rounded w-full" />
-            <div className="h-3 bg-zinc-900 rounded w-10/12" />
-            <div className="h-3 bg-zinc-900 rounded w-8/12" />
-            <div className="h-3 bg-zinc-900 rounded w-11/12" />
-          </div>
+        <div className="space-y-2.5 animate-pulse">
+          <div className="h-3 bg-zinc-900 rounded w-full" />
+          <div className="h-3 bg-zinc-900 rounded w-[97%]" />
+          <div className="h-3 bg-zinc-900 rounded w-[94%]" />
+          <div className="h-3 bg-zinc-900 rounded w-2/3" />
         </div>
       ) : paragraphs.length > 0 ? (
-        <div className="lg:columns-2 lg:gap-10 [column-fill:balance]">
+        <div className="max-w-none space-y-4">
           {paragraphs.map((para, i) => (
-            <p
-              key={i}
-              className="text-zinc-300 text-sm md:text-[15px] leading-relaxed mb-4 break-inside-avoid"
-            >
+            <p key={i} className="text-zinc-300 text-sm md:text-[15px] leading-relaxed">
               {para}
             </p>
           ))}

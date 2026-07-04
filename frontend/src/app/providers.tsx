@@ -58,12 +58,20 @@ const connectors = connectorsForWallets(
   }
 );
 
+// Transport per chain. Sepolia uses NEXT_PUBLIC_RPC_URL in production (a real
+// Alchemy/Infura endpoint) so we're not hammering the flaky public RPC; it
+// falls back to the public node only when the env var is unset (local dev).
+const sepoliaRpc =
+  publicEnv.chainId === sepolia.id && publicEnv.rpcUrl
+    ? publicEnv.rpcUrl
+    : 'https://ethereum-sepolia-rpc.publicnode.com';
+
 const wagmiConfig = createConfig({
   chains: [preferred, ...rest] as unknown as readonly [typeof preferred, ...typeof rest],
   connectors,
   transports: {
     [hardhat.id]: http(publicEnv.rpcUrl),
-    [sepolia.id]: http('https://rpc.sepolia.org'),
+    [sepolia.id]: http(sepoliaRpc),
   },
   ssr: true,
 });
