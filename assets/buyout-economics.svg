@@ -1,0 +1,61 @@
+<svg width="1200" height="420" viewBox="0 0 1200 420" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <linearGradient id="bbg" x1="0" y1="0" x2="0" y2="420"><stop stop-color="#07070b"/><stop offset="1" stop-color="#0a0a12"/></linearGradient>
+    <style>
+      .p  { fill:#a1a1aa; font-size:13px; }
+      .mono{ font-family:ui-monospace,monospace; }
+    </style>
+  </defs>
+  <rect width="1200" height="420" fill="url(#bbg)"/>
+  <text x="60" y="56" fill="#fafafa" font-size="26" font-weight="700" letter-spacing="-0.6">Arbitrage-enforced valuation</text>
+  <text x="60" y="82" fill="#71717a" font-size="14">The blockchain is blind to the real world. Trader greed keeps the token honest.</text>
+
+  <!-- left: the floor bar chart -->
+  <g transform="translate(60 130)">
+    <text x="0" y="0" fill="#71717a" font-size="11" font-weight="600" letter-spacing="0.18em">THE BUYOUT FLOOR</text>
+    <!-- axis -->
+    <line x1="0" y1="220" x2="470" y2="220" stroke="#3f3f46"/>
+    <!-- valuation bar -->
+    <rect x="40" y="120" width="90" height="100" rx="4" fill="#3b82f6" fill-opacity="0.5"/>
+    <text x="85" y="245" class="p" text-anchor="middle">Valuation</text>
+    <text x="85" y="108" fill="#93c5fd" font-size="13" class="mono" text-anchor="middle">$50k</text>
+    <!-- market cap bar -->
+    <rect x="180" y="90" width="90" height="130" rx="4" fill="#22c55e" fill-opacity="0.5"/>
+    <text x="225" y="245" class="p" text-anchor="middle">Market Cap</text>
+    <text x="225" y="78" fill="#86efac" font-size="13" class="mono" text-anchor="middle">$65k</text>
+    <!-- required floor bar -->
+    <rect x="320" y="46" width="90" height="174" rx="4" fill="#f59e0b" fill-opacity="0.65"/>
+    <text x="365" y="245" class="p" text-anchor="middle">Buyout Floor</text>
+    <text x="365" y="34" fill="#fcd34d" font-size="13" class="mono" text-anchor="middle">$81.25k</text>
+    <text x="0" y="290" class="p mono" fill="#52525b">floor = max(valuation, marketCap) × 1.25</text>
+  </g>
+
+  <!-- right: the loop / consequences -->
+  <g transform="translate(620 130)">
+    <text x="0" y="0" fill="#71717a" font-size="11" font-weight="600" letter-spacing="0.18em">WHAT KEEPS PRICE HONEST</text>
+
+    <g transform="translate(0 24)">
+      <rect width="500" height="66" rx="12" fill="#ffffff" fill-opacity="0.03" stroke="#27272a"/>
+      <circle cx="34" cy="33" r="14" fill="#3b82f6" fill-opacity="0.15" stroke="#3b82f6" stroke-opacity="0.5"/>
+      <text x="34" y="38" fill="#93c5fd" font-size="14" font-weight="700" text-anchor="middle">↓</text>
+      <text x="62" y="30" fill="#e4e4e7" font-size="14" font-weight="600">Token trades below real-world value</text>
+      <text x="62" y="52" class="p">A whale buys 100% at the premium, takes the physical asset, flips it.</text>
+    </g>
+
+    <g transform="translate(0 104)">
+      <rect width="500" height="66" rx="12" fill="#ffffff" fill-opacity="0.03" stroke="#27272a"/>
+      <circle cx="34" cy="33" r="14" fill="#22c55e" fill-opacity="0.15" stroke="#22c55e" stroke-opacity="0.5"/>
+      <text x="34" y="38" fill="#86efac" font-size="14" font-weight="700" text-anchor="middle">=</text>
+      <text x="62" y="30" fill="#e4e4e7" font-size="14" font-weight="600">Holders exit at the higher of the two prices</text>
+      <text x="62" y="52" class="p">The total pot (buyout + pool) is split pro-rata across circulating supply.</text>
+    </g>
+
+    <g transform="translate(0 184)">
+      <rect width="500" height="66" rx="12" fill="#ffffff" fill-opacity="0.03" stroke="#27272a"/>
+      <circle cx="34" cy="33" r="14" fill="#f59e0b" fill-opacity="0.15" stroke="#f59e0b" stroke-opacity="0.5"/>
+      <text x="34" y="38" fill="#fcd34d" font-size="14" font-weight="700" text-anchor="middle">↑</text>
+      <text x="62" y="30" fill="#e4e4e7" font-size="14" font-weight="600">The looming threat pegs the market</text>
+      <text x="62" y="52" class="p">Undervaluation is never free money for long — so it self-corrects.</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,81 @@
+<svg width="1200" height="380" viewBox="0 0 1200 380" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07070b"/>
+      <stop offset="0.55" stop-color="#0a0a12"/>
+      <stop offset="1" stop-color="#07070b"/>
+    </linearGradient>
+    <radialGradient id="glowBlue" cx="0" cy="0" r="1" gradientTransform="translate(230 70) rotate(35) scale(520 320)">
+      <stop stop-color="#3b82f6" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#3b82f6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowTeal" cx="0" cy="0" r="1" gradientTransform="translate(1050 340) rotate(-140) scale(460 300)">
+      <stop stop-color="#14b8a6" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#14b8a6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.5" stop-color="#c9ccd4"/>
+      <stop offset="1" stop-color="#8a8f99"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="380" fill="url(#bg)"/>
+  <rect width="1200" height="380" fill="url(#glowBlue)"/>
+  <rect width="1200" height="380" fill="url(#glowTeal)"/>
+
+  <!-- faint grid -->
+  <g stroke="#ffffff" stroke-opacity="0.04">
+    <line x1="0" y1="95" x2="1200" y2="95"/>
+    <line x1="0" y1="190" x2="1200" y2="190"/>
+    <line x1="0" y1="285" x2="1200" y2="285"/>
+    <line x1="300" y1="0" x2="300" y2="380"/>
+    <line x1="600" y1="0" x2="600" y2="380"/>
+    <line x1="900" y1="0" x2="900" y2="380"/>
+  </g>
+
+  <!-- brand mark: three offset slabs (scaled from the app logo) -->
+  <g transform="translate(96 150) scale(3.4)">
+    <rect x="2" y="15.5" width="9" height="2.6" rx="0.6" fill="#ffffff" opacity="0.32"/>
+    <rect x="6.5" y="10.8" width="11" height="2.6" rx="0.6" fill="#ffffff" opacity="0.62"/>
+    <rect x="12" y="6" width="10" height="2.6" rx="0.6" fill="#ffffff"/>
+  </g>
+
+  <text x="200" y="182" font-size="72" font-weight="700" letter-spacing="-2.5" fill="url(#metal)">StakePort</text>
+  <text x="202" y="228" font-size="24" font-weight="500" letter-spacing="-0.4" fill="#a1a1aa">The liquidity layer for real-world scarcity.</text>
+
+  <!-- capability chips -->
+  <g font-size="15" font-weight="600" letter-spacing="0.5">
+    <g transform="translate(202 268)">
+      <rect width="150" height="34" rx="17" fill="#ffffff" fill-opacity="0.04" stroke="#3b82f6" stroke-opacity="0.35"/>
+      <circle cx="20" cy="17" r="3.5" fill="#60a5fa"/>
+      <text x="34" y="22" fill="#cbd5e1">AMM Trading</text>
+    </g>
+    <g transform="translate(364 268)">
+      <rect width="170" height="34" rx="17" fill="#ffffff" fill-opacity="0.04" stroke="#22c55e" stroke-opacity="0.35"/>
+      <circle cx="20" cy="17" r="3.5" fill="#34d399"/>
+      <text x="34" y="22" fill="#cbd5e1">AI Appraiser</text>
+    </g>
+    <g transform="translate(546 268)">
+      <rect width="168" height="34" rx="17" fill="#ffffff" fill-opacity="0.04" stroke="#a78bfa" stroke-opacity="0.35"/>
+      <circle cx="20" cy="17" r="3.5" fill="#a78bfa"/>
+      <text x="34" y="22" fill="#cbd5e1">ML Quant Oracle</text>
+    </g>
+    <g transform="translate(726 268)">
+      <rect width="196" height="34" rx="17" fill="#ffffff" fill-opacity="0.04" stroke="#f59e0b" stroke-opacity="0.35"/>
+      <circle cx="20" cy="17" r="3.5" fill="#fbbf24"/>
+      <text x="34" y="22" fill="#cbd5e1">Hostile Buyout Floor</text>
+    </g>
+  </g>
+
+  <!-- right-side abstract AMM curve (x*y=k) -->
+  <g transform="translate(760 60)" opacity="0.9">
+    <path d="M40 250 C 120 250, 150 90, 360 70" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-opacity="0.55"/>
+    <path d="M40 250 C 120 250, 150 90, 360 70" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-opacity="0.0"/>
+    <line x1="40" y1="40" x2="40" y2="250" stroke="#3f3f46" stroke-width="1.5"/>
+    <line x1="40" y1="250" x2="360" y2="250" stroke="#3f3f46" stroke-width="1.5"/>
+    <circle cx="150" cy="150" r="5" fill="#60a5fa"/>
+    <circle cx="250" cy="95" r="5" fill="#34d399"/>
+    <text x="300" y="40" font-size="13" font-family="ui-monospace, monospace" fill="#52525b">x · y = k</text>
+  </g>
+</svg>

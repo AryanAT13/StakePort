@@ -1,0 +1,91 @@
+<svg width="1200" height="640" viewBox="0 0 1200 640" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <linearGradient id="abg" x1="0" y1="0" x2="0" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07070b"/><stop offset="1" stop-color="#0a0a12"/>
+    </linearGradient>
+    <style>
+      .lbl { fill:#e4e4e7; font-size:17px; font-weight:600; }
+      .sub { fill:#71717a; font-size:12.5px; }
+      .tag { fill:#a1a1aa; font-size:12px; font-weight:600; letter-spacing:0.14em; }
+      .mono{ font-family:ui-monospace, SFMono-Regular, monospace; }
+      .edge{ stroke:#3f3f46; stroke-width:1.5; }
+    </style>
+  </defs>
+  <rect width="1200" height="640" fill="url(#abg)"/>
+  <text x="60" y="56" fill="#fafafa" font-size="26" font-weight="700" letter-spacing="-0.6">System Architecture</text>
+  <text x="60" y="82" class="sub" font-size="14">Next.js orchestrates a Web3 chain, a Postgres cache, and a Python ML service.</text>
+
+  <!-- CLIENT -->
+  <g>
+    <rect x="60" y="120" width="240" height="120" rx="14" fill="#ffffff" fill-opacity="0.03" stroke="#27272a"/>
+    <text x="80" y="152" class="tag">CLIENT</text>
+    <text x="80" y="182" class="lbl">Browser + Wallet</text>
+    <text x="80" y="206" class="sub">MetaMask · wagmi · viem</text>
+    <text x="80" y="226" class="sub">RainbowKit · SIWE sign-in</text>
+  </g>
+
+  <!-- VERCEL / NEXT -->
+  <g>
+    <rect x="420" y="100" width="360" height="160" rx="14" fill="#3b82f6" fill-opacity="0.06" stroke="#3b82f6" stroke-opacity="0.4"/>
+    <text x="444" y="132" class="tag" fill="#93c5fd">VERCEL · NEXT.JS 16</text>
+    <text x="444" y="162" class="lbl">Frontend + API Routes</text>
+    <text x="444" y="186" class="sub">App Router · React 19 · Tailwind 4</text>
+    <text x="444" y="206" class="sub">R3F shader hero · TradingView charts</text>
+    <text x="444" y="230" class="sub mono">/api/auth · /api/ai · /api/trades · /api/markets</text>
+  </g>
+
+  <!-- Chain -->
+  <g>
+    <rect x="900" y="70" width="240" height="120" rx="14" fill="#22c55e" fill-opacity="0.06" stroke="#22c55e" stroke-opacity="0.4"/>
+    <text x="922" y="102" class="tag" fill="#86efac">SEPOLIA</text>
+    <text x="922" y="132" class="lbl">Smart Contracts</text>
+    <text x="922" y="156" class="sub">AssetFactory · TradeableAsset</text>
+    <text x="922" y="176" class="sub">MockUSDC · AMM + Buyout</text>
+  </g>
+
+  <!-- Neon -->
+  <g>
+    <rect x="900" y="220" width="240" height="110" rx="14" fill="#a78bfa" fill-opacity="0.06" stroke="#a78bfa" stroke-opacity="0.4"/>
+    <text x="922" y="252" class="tag" fill="#c4b5fd">NEON</text>
+    <text x="922" y="282" class="lbl">PostgreSQL</text>
+    <text x="922" y="306" class="sub">users · trades · AI cache</text>
+  </g>
+
+  <!-- Render / FastAPI -->
+  <g>
+    <rect x="420" y="360" width="360" height="180" rx="14" fill="#f59e0b" fill-opacity="0.05" stroke="#f59e0b" stroke-opacity="0.4"/>
+    <text x="444" y="392" class="tag" fill="#fcd34d">RENDER · FASTAPI</text>
+    <text x="444" y="422" class="lbl">AI / ML Engine (Python)</text>
+    <text x="444" y="448" class="sub">Gemini multimodal → prospectus</text>
+    <text x="444" y="470" class="sub">Isolation Forest → fair value</text>
+    <text x="444" y="492" class="sub">Gradient-Boosted Trees → risk tier</text>
+    <text x="444" y="520" class="sub mono">/api/generate-desc · /fair-value · /risk-alignment</text>
+  </g>
+
+  <!-- external -->
+  <g>
+    <rect x="60" y="360" width="240" height="180" rx="14" fill="#ffffff" fill-opacity="0.03" stroke="#27272a"/>
+    <text x="80" y="392" class="tag">EXTERNAL</text>
+    <text x="80" y="422" class="lbl">Data + Storage</text>
+    <text x="80" y="448" class="sub">Google Gemini (LLM)</text>
+    <text x="80" y="470" class="sub">SerpAPI (retail comps)</text>
+    <text x="80" y="492" class="sub">Pinata (IPFS pinning)</text>
+    <text x="80" y="514" class="sub">Alchemy (Sepolia RPC)</text>
+  </g>
+
+  <!-- edges -->
+  <g class="edge" fill="none">
+    <path d="M300 180 H420" marker-end="url(#arr)"/>
+    <path d="M780 150 H900 V130" marker-end="url(#arr)"/>
+    <path d="M780 210 H840 V275 H900" marker-end="url(#arr)"/>
+    <path d="M600 260 V360" marker-end="url(#arr)"/>
+    <path d="M420 450 H300" marker-end="url(#arr)"/>
+  </g>
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0 0 L9 4.5 L0 9 z" fill="#52525b"/>
+    </marker>
+  </defs>
+  <text x="330" y="172" class="sub mono" fill="#3f3f46">reads/writes</text>
+  <text x="612" y="320" class="sub mono" fill="#3f3f46">server → server</text>
+</svg>

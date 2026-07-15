@@ -1,0 +1,72 @@
+<svg width="1200" height="360" viewBox="0 0 1200 360" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <linearGradient id="lbg" x1="0" y1="0" x2="0" y2="360"><stop stop-color="#07070b"/><stop offset="1" stop-color="#0a0a12"/></linearGradient>
+    <style>
+      .num{ font-family:ui-monospace,monospace; font-size:12px; fill:#52525b; }
+      .st { fill:#fafafa; font-size:16px; font-weight:650; }
+      .ds { fill:#a1a1aa; font-size:12px; }
+    </style>
+  </defs>
+  <rect width="1200" height="360" fill="url(#lbg)"/>
+  <text x="60" y="56" fill="#fafafa" font-size="26" font-weight="700" letter-spacing="-0.6">The asset lifecycle</text>
+  <text x="60" y="82" fill="#71717a" font-size="14">From a luxury watch to a tradable ticker — and, if the market drifts, to a settled physical claim.</text>
+
+  <!-- connecting rail -->
+  <line x1="120" y1="200" x2="1080" y2="200" stroke="#27272a" stroke-width="2"/>
+
+  <!-- nodes -->
+  <g>
+    <!-- 1 List -->
+    <circle cx="140" cy="200" r="9" fill="#3b82f6"/>
+    <text x="118" y="150" class="num">01</text>
+    <text x="118" y="172" class="st">List</text>
+    <text x="118" y="238" class="ds">Upload photos +</text>
+    <text x="118" y="254" class="ds">notes. Mint ERC-20</text>
+    <text x="118" y="270" class="ds">+ 1,000 shares.</text>
+  </g>
+  <g>
+    <!-- 2 Appraise -->
+    <circle cx="325" cy="200" r="9" fill="#22c55e"/>
+    <text x="303" y="150" class="num">02</text>
+    <text x="303" y="172" class="st">Appraise</text>
+    <text x="303" y="238" class="ds">AI writes the</text>
+    <text x="303" y="254" class="ds">prospectus; oracle</text>
+    <text x="303" y="270" class="ds">sets fair value.</text>
+  </g>
+  <g>
+    <!-- 3 Initialize -->
+    <circle cx="510" cy="200" r="9" fill="#3b82f6"/>
+    <text x="488" y="150" class="num">03</text>
+    <text x="488" y="172" class="st">Initialize</text>
+    <text x="488" y="238" class="ds">Seed 50% of the</text>
+    <text x="488" y="254" class="ds">valuation as AMM</text>
+    <text x="488" y="270" class="ds">liquidity. Trading live.</text>
+  </g>
+  <g>
+    <!-- 4 Trade -->
+    <circle cx="695" cy="200" r="9" fill="#3b82f6"/>
+    <text x="673" y="150" class="num">04</text>
+    <text x="673" y="172" class="st">Trade</text>
+    <text x="673" y="238" class="ds">Retail buys/sells on</text>
+    <text x="673" y="254" class="ds">the curve. Risk card</text>
+    <text x="673" y="270" class="ds">matches appetite.</text>
+  </g>
+  <g>
+    <!-- 5 Buyout -->
+    <circle cx="880" cy="200" r="9" fill="#f59e0b"/>
+    <text x="858" y="150" class="num">05</text>
+    <text x="858" y="172" class="st">Buyout</text>
+    <text x="858" y="238" class="ds">Whale pays 125% of</text>
+    <text x="858" y="254" class="ds">max(valuation, cap).</text>
+    <text x="858" y="270" class="ds">Trading halts.</text>
+  </g>
+  <g>
+    <!-- 6 Vault -->
+    <circle cx="1065" cy="200" r="9" fill="#a78bfa"/>
+    <text x="1043" y="150" class="num">06</text>
+    <text x="1043" y="172" class="st">Vault</text>
+    <text x="1043" y="238" class="ds">Holders cash out</text>
+    <text x="1043" y="254" class="ds">pro-rata. Buyer claims</text>
+    <text x="1043" y="270" class="ds">physical ownership.</text>
+  </g>
+</svg>

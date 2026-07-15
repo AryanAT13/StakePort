@@ -1,0 +1,60 @@
+<svg width="1200" height="330" viewBox="0 0 1200 330" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <linearGradient id="rbg" x1="0" y1="0" x2="0" y2="330"><stop stop-color="#07070b"/><stop offset="1" stop-color="#0a0a12"/></linearGradient>
+    <marker id="rarr" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 z" fill="#52525b"/></marker>
+    <style>
+      .box { fill:#ffffff; fill-opacity:0.03; stroke:#27272a; }
+      .t   { fill:#e4e4e7; font-size:14px; font-weight:600; }
+      .s   { fill:#71717a; font-size:11.5px; }
+      .mono{ font-family:ui-monospace,monospace; }
+    </style>
+  </defs>
+  <rect width="1200" height="330" fill="url(#rbg)"/>
+  <text x="60" y="56" fill="#fafafa" font-size="26" font-weight="700" letter-spacing="-0.6">Risk Alignment pipeline</text>
+  <text x="60" y="82" fill="#71717a" font-size="14">A gradient-boosted classifier scores the asset; the LLM only writes the friendly line.</text>
+
+  <!-- 1 features -->
+  <g transform="translate(60 130)">
+    <rect width="230" height="150" rx="12" class="box"/>
+    <text x="20" y="34" class="s mono">STEP 1 · FEATURES</text>
+    <text x="20" y="62" class="t">7 quant signals</text>
+    <text x="20" y="86" class="s">volatility · drawdown</text>
+    <text x="20" y="104" class="s">liquidity · fair-value gap</text>
+    <text x="20" y="122" class="s">appreciation · category</text>
+    <text x="20" y="140" class="s">book activity</text>
+  </g>
+  <line x1="290" y1="205" x2="345" y2="205" stroke="#3f3f46" stroke-width="1.5" marker-end="url(#rarr)"/>
+
+  <!-- 2 model -->
+  <g transform="translate(350 130)">
+    <rect width="230" height="150" rx="12" fill="#a78bfa" fill-opacity="0.05" stroke="#a78bfa" stroke-opacity="0.3"/>
+    <text x="20" y="34" class="s mono" fill="#c4b5fd">STEP 2 · MODEL</text>
+    <text x="20" y="62" class="t">Gradient-Boosted Trees</text>
+    <text x="20" y="86" class="s">scikit-learn GBM</text>
+    <text x="20" y="104" class="s">(XGBoost/LightGBM family)</text>
+    <text x="20" y="122" class="s">→ tier + 0–100 score</text>
+    <text x="20" y="140" class="s">→ class probabilities</text>
+  </g>
+  <line x1="580" y1="205" x2="635" y2="205" stroke="#3f3f46" stroke-width="1.5" marker-end="url(#rarr)"/>
+
+  <!-- 3 align -->
+  <g transform="translate(640 130)">
+    <rect width="230" height="150" rx="12" class="box"/>
+    <text x="20" y="34" class="s mono">STEP 3 · ALIGN</text>
+    <text x="20" y="62" class="t">vs your appetite</text>
+    <text x="20" y="86" class="s">conservative / moderate /</text>
+    <text x="20" y="104" class="s">aggressive (from onboarding)</text>
+    <text x="20" y="128" class="s">→ High · Medium · Low</text>
+  </g>
+  <line x1="870" y1="205" x2="925" y2="205" stroke="#3f3f46" stroke-width="1.5" marker-end="url(#rarr)"/>
+
+  <!-- 4 copy -->
+  <g transform="translate(930 130)">
+    <rect width="210" height="150" rx="12" fill="#22c55e" fill-opacity="0.05" stroke="#22c55e" stroke-opacity="0.3"/>
+    <text x="20" y="34" class="s mono" fill="#86efac">STEP 4 · COPY</text>
+    <text x="20" y="62" class="t">LLM one-liner</text>
+    <text x="20" y="90" class="s">"This Patek may be a</text>
+    <text x="20" y="108" class="s">little outside your usual</text>
+    <text x="20" y="126" class="s">comfort zone."</text>
+  </g>
+</svg>
