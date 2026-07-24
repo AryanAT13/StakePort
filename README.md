@@ -13,34 +13,13 @@ Fractionalize, trade, and acquire high-value physical assets — luxury watches,
 [![Python](https://img.shields.io/badge/FastAPI_·_ML-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](#-license)
 
-**[Live Demo »](https://stake-port.vercel.app)** &nbsp;·&nbsp; **[Deployment Playbook »](DEPLOYMENT.md)**
+**[Live Demo »](https://stake-port.vercel.app)** &nbsp;
 
 </div>
 
 ---
 
-## Table of Contents
-
-- [The Problem](#-the-problem)
-- [What StakePort Does](#-what-stakeport-does)
-- [Screenshots](#-screenshots)
-- [The Mechanism: Three Rails](#-the-mechanism-three-rails)
-- [Arbitrage-Enforced Valuation](#-arbitrage-enforced-valuation-the-hostile-buyout)
-- [The Asset Lifecycle](#-the-asset-lifecycle)
-- [Feature Highlights](#-feature-highlights)
-- [The AI / ML Stack](#-the-ai--ml-stack)
-- [Smart Contract Internals](#-smart-contract-internals)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Repository Structure](#-repository-structure)
-- [Getting Started (Local)](#-getting-started-local)
-- [Deployment](#-deployment)
-- [Roadmap](#-roadmap)
-- [Disclaimer & License](#-disclaimer)
-
----
-
-## 🧭 The Problem
+## The Problem
 
 Wealth has always traded on a different clock. A Patek Philippe that doubles in three years sits in a safe for a decade. A Manhattan penthouse takes eighteen months to clear escrow. The world's most valuable physical things **appreciate quietly and change hands rarely** — priced by closed circles of auction houses and private brokers, with thin buyer pools, opaque discovery, and theatrical liquidity.
 
@@ -50,7 +29,7 @@ At the same time, tokenizing these assets on-chain hits a fundamental wall: **th
 
 ---
 
-## 💡 What StakePort Does
+## What StakePort Does
 
 StakePort is a decentralized exchange for physical scarcity. It combines four ideas that each fix a problem the others can't:
 
@@ -63,7 +42,7 @@ The result feels like a professional trading terminal — dark, dense, live — 
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 > Live captures from the deployed app. *(Drop your PNGs into [`assets/screenshots/`](assets/screenshots/) — filenames are pre-wired below.)*
 
@@ -84,7 +63,7 @@ The result feels like a professional trading terminal — dark, dense, live — 
 
 ---
 
-## ⚙️ The Mechanism: Three Rails
+## The Mechanism: Three Rails
 
 ![Mechanism](assets/mechanism.svg)
 
@@ -92,7 +71,7 @@ We don't bolt AI onto a DEX. The smart contract, the language model, and the sta
 
 ---
 
-## 🔥 Arbitrage-Enforced Valuation (The Hostile Buyout)
+## Arbitrage-Enforced Valuation (The Hostile Buyout)
 
 The headline economic primitive. Because the chain can't know an asset's real value, StakePort relies on **trader greed** to peg it.
 
@@ -104,7 +83,7 @@ Any whale (not the creator) can acquire **100% of an asset** by paying a **25% p
 
 ---
 
-## 🔄 The Asset Lifecycle
+## The Asset Lifecycle
 
 ![Lifecycle](assets/lifecycle.svg)
 
@@ -112,7 +91,7 @@ Every asset travels the same path — predictable for sellers, transparent for t
 
 ---
 
-## ✨ Feature Highlights
+## Feature Highlights
 
 | | Feature | What it does |
 |:---:|---|---|
@@ -127,7 +106,7 @@ Every asset travels the same path — predictable for sellers, transparent for t
 
 ---
 
-## 🧠 The AI / ML Stack
+## The AI / ML Stack
 
 Three distinct models, each the right tool for its job.
 
@@ -163,7 +142,7 @@ tier  = TIERS[int(np.argmax(proba))]                # conservative | moderate | 
 
 ---
 
-## 📜 Smart Contract Internals
+## Smart Contract Internals
 
 Three contracts: `MockUSDC` (testnet faucet currency), `AssetFactory` (deploys markets), and `TradeableAsset` (the ERC-20 + AMM + buyout engine). A few pieces worth highlighting:
 
@@ -209,7 +188,7 @@ TradeableAsset — Phase 9
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ![Architecture](assets/architecture.svg)
 
@@ -217,7 +196,7 @@ The Next.js app is the orchestrator. The browser talks to the chain directly (wa
 
 ---
 
-## 🧰 Tech Stack
+## Tech Stack
 
 | Layer | Technologies |
 |---|---|
@@ -230,7 +209,7 @@ The Next.js app is the orchestrator. The browser talks to the chain directly (wa
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 StakePort/
@@ -254,7 +233,7 @@ StakePort/
 
 ---
 
-## 🚀 Getting Started (Local)
+## Getting Started (Local)
 
 **Prerequisites:** Node 20+, Python 3.12+, a MetaMask wallet, and free keys for [Gemini](https://aistudio.google.com/apikey), [SerpAPI](https://serpapi.com), and [Pinata](https://app.pinata.cloud). A [Neon](https://neon.tech) Postgres URL (a dev branch works for local too).
 
@@ -305,32 +284,15 @@ npm run dev                            # → http://localhost:3000
 
 ---
 
-## ☁️ Deployment
+## Deployment
 
 Going live moves off localhost entirely — **Vercel** (frontend), **Render** (AI engine), **Neon** (Postgres), and **Sepolia** (contracts), all on free tiers. The complete step-by-step — accounts to create, which keys to generate vs reuse, exact env-var tables for each service, and free-tier gotchas — is in:
 
-### 👉 **[DEPLOYMENT.md](DEPLOYMENT.md)**
-
 ---
 
-## 🗺️ Roadmap
-
-- [ ] Realized P&L (track sells, not just unrealized)
-- [ ] Live buyout-window notifications
-- [ ] Retrain the risk model on real accumulated trade data
-- [ ] Order-history / activity page per wallet
-- [ ] Multi-chain deployment (Base, Arbitrum)
-- [ ] Mobile-wallet support via WalletConnect project id
-
----
-
-## ⚠️ Disclaimer
+## Disclaimer
 
 StakePort is a **testnet demonstration** running on Sepolia with mock USDC. It is not audited, not deployed to mainnet, and **not financial advice.** The "assets" are illustrative; no real physical goods are escrowed. Do not use with real funds.
-
-## 📄 License
-
-MIT © StakePort. See [LICENSE](LICENSE).
 
 <div align="center">
 <br/>
